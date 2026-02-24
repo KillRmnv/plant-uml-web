@@ -1,4 +1,4 @@
 flask==2.3.0
-py-sc-client @ file:./external/py-sc-client
-py-sc-kpm @ file:./external/py-sc-kpm
 websockets==11.0.0
+-e external/py-sc-client
+-e external/py-sc-kpm
