@@ -19,11 +19,10 @@ my-project/
 ├── src/
 │   ├── backend/          # Flask приложение
 │   └── frontend/         # HTML
-├── static/               # Статические файлы (SCg)
+├── static/               # Статические файлы 
 ├── package.json         # Node.js зависимости
 ├── requirements.txt     # Python зависимости
-├── Gruntfile.js         # Сборка SCg
-├── docker-compose.yml   # Docker оркестрация
+├── Gruntfile.js         # Сборка   
 └── Dockerfile           # Сборка образа
 ```
 
