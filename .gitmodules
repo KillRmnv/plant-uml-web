@@ -1,0 +1,11 @@
+[submodule "external/sc-web"]
+	path = external/sc-web
+	url = https://github.com/ostis-ai/sc-web.git
+
+[submodule "external/py-sc-client"]
+	path = external/py-sc-client
+	url = https://github.com/ostis-ai/py-sc-client.git
+
+[submodule "external/py-sc-kpm"]
+	path = external/py-sc-kpm
+	url = https://github.com/ostis-ai/py-sc-kpm.git
