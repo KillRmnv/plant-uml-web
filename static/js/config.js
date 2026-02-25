@@ -8,8 +8,8 @@ const Config = {
     
     PANELS: {
         DEFAULT_WIDTHS: [33.33, 33.33, 33.33],
-        MIN_WIDTH: 200,
-        MAX_WIDTH: 80,
+        MIN_WIDTH: 150,
+        MAX_WIDTH: null,
     },
     
     EDITOR: {

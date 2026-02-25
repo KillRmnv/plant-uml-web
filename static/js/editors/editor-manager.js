@@ -7,8 +7,12 @@ class EditorManager {
         this.container = container;
         this.options = options;
         
-        this.currentEditor = Config.EDITOR.DEFAULT_TYPE;
+        this.currentEditor = Config.EDITOR.DEFAULT_TYPE || 'scs';
         this.editors = {};
+        this.initialized = {
+            scs: false,
+            scg: false
+        };
         
         this.init();
     }
@@ -45,92 +49,143 @@ class EditorManager {
         contentContainer.className = 'panel-content';
         contentContainer.style.display = 'flex';
         contentContainer.style.flexDirection = 'column';
+        contentContainer.style.flex = '1';
+        contentContainer.style.minHeight = '0';
         this.container.appendChild(contentContainer);
         
-        this.editors.scs = this.createScSEditor();
-        this.editors.scg = this.createScgEditor();
-        
         this.contentContainer = contentContainer;
+        
+        this.createScSEditorContainer();
+        this.createScgEditorContainer();
     }
 
-    createScSEditor() {
+    createScSEditorContainer() {
         const editorContainer = document.createElement('div');
-        editorContainer.className = 'scs-editor-container';
+        editorContainer.className = 'scs-editor-wrapper';
+        editorContainer.style.display = 'flex';
+        editorContainer.style.flexDirection = 'column';
+        editorContainer.style.flex = '1';
+        editorContainer.style.minHeight = '0';
+        editorContainer.style.width = '100%';
+        editorContainer.style.height = '100%';
+        editorContainer.style.overflow = 'hidden';
         editorContainer.style.display = 'none';
-        
-        editorContainer.innerHTML = `
-            <textarea class="scs-textarea" placeholder="Enter ScS code here..."></textarea>
-        `;
         
         this.contentContainer.appendChild(editorContainer);
         
-        const textarea = editorContainer.querySelector('textarea');
-        textarea.addEventListener('input', () => {
-            this.options.onChange?.('scs', textarea.value);
-        });
-        
-        return {
+        this.editors.scs = {
             type: 'scs',
             element: editorContainer,
-            getValue: () => textarea.value,
-            setValue: (value) => { textarea.value = value; },
-            focus: () => textarea.focus(),
+            instance: null,
+            getValue: () => '',
+            setValue: () => {},
+            focus: () => {},
         };
+        
+        this._initScsEditorWhenReady(editorContainer);
     }
 
-    createScgEditor() {
-        const editorContainer = document.createElement('div');
-        editorContainer.className = 'scg-editor-container';
-        editorContainer.style.display = 'none';
+    _initScsEditorWhenReady(container) {
+        const tryInit = () => {
+            if (typeof monaco !== 'undefined') {
+                try {
+                    // Temporarily show container for Monaco to calculate dimensions
+                    container.style.display = 'flex';
+                    container.style.visibility = 'hidden';
+                    
+                    const editor = new ScsEditor(container);
+                    
+                    // After Monaco is created, restore visibility
+                    requestAnimationFrame(() => {
+                        container.style.visibility = 'visible';
+                        if (editor.editor) {
+                            editor.editor.layout();
+                        }
+                    });
+                    
+                    this.editors.scs.instance = editor;
+                    this.editors.scs.getValue = () => editor.getValue();
+                    this.editors.scs.setValue = (value) => editor.setValue(value);
+                    this.editors.scs.focus = () => editor.focus();
+                    this.initialized.scs = true;
+                    console.log('[EditorManager] ScS editor initialized');
+                    
+                    if (this.options.onChange) {
+                        container.querySelector('.scs-editor-container')?.addEventListener('input', (e) => {
+                            this.options.onChange('scs', e.target.value);
+                        });
+                    }
+                } catch (error) {
+                    console.error('[EditorManager] Failed to init ScS:', error);
+                    setTimeout(tryInit, 100);
+                }
+            } else {
+                setTimeout(tryInit, 100);
+            }
+        };
         
-        editorContainer.innerHTML = `
-            <div id="scg-viewer"></div>
-        `;
+        tryInit();
+    }
+
+    createScgEditorContainer() {
+        const editorContainer = document.createElement('div');
+        editorContainer.className = 'scg-editor-wrapper';
+        editorContainer.style.display = 'flex';
+        editorContainer.style.flexDirection = 'column';
+        editorContainer.style.flex = '1';
+        editorContainer.style.minHeight = '0';
+        editorContainer.style.display = 'none';
         
         this.contentContainer.appendChild(editorContainer);
         
-        return {
+        this.editors.scg = {
             type: 'scg',
             element: editorContainer,
-            getValue: () => {
-                if (window.scgEditor && window.scgEditor.scene) {
-                    return window.scgEditor.scene.exportToJson();
-                }
-                return null;
-            },
-            setValue: (value) => {
-                if (window.scgEditor && window.scgEditor.scene && value) {
-                    window.scgEditor.scene.importFromJson(value);
-                    window.scgEditor.render.update();
-                }
-            },
+            instance: null,
+            getValue: () => '',
+            setValue: () => {},
             focus: () => {},
-            initScg: () => this.initScgEditor(),
+            initScg: () => this._initScgEditor(editorContainer),
         };
     }
 
-    initScgEditor() {
-        const viewerContainer = this.editors.scg.element.querySelector('#scg-viewer');
+    _initScgEditor(container) {
+        if (this.initialized.scg) return;
         
         if (typeof SCg === 'undefined') {
-            console.warn('[EditorManager] SCg not loaded yet');
+            console.warn('[EditorManager] SCg not loaded yet, retrying...');
+            setTimeout(() => this._initScgEditor(container), 100);
             return;
         }
         
-        const sandbox = {
-            container: 'scg-viewer',
-            addr: 0,
-            is_struct: false,
-            format_addr: 'format_scg_json',
-            resolveElementsAddr: async (identifiers) => {
-                console.log('[SCg] Resolving:', identifiers);
-                return {};
-            },
-            canEdit: () => true,
-            createViewersForScLinks: (links) => {},
-        };
-        
         try {
+            const editorContainer = document.createElement('div');
+            editorContainer.id = 'scg-viewer';
+            editorContainer.style.width = '100%';
+            editorContainer.style.height = '100%';
+            container.appendChild(editorContainer);
+            
+            const sandbox = {
+                container: 'scg-viewer',
+                addr: 0,
+                is_struct: false,
+                format_addr: 'format_scg_json',
+                resolveElementsAddr: async (identifiers) => {
+                    console.log('[SCg] Resolving:', identifiers);
+                    return {};
+                },
+                canEdit: () => true,
+                createViewersForScLinks: (links) => {},
+                updateContent: (addr) => {
+                    console.log('[SCg] updateContent called', addr);
+                },
+                getIdentifier: (addr, callback) => {
+                    callback('');
+                },
+                postLayout: (scene) => {},
+                layout: (scene) => {},
+            };
+            
             const editor = new SCg.Editor();
             editor.init({
                 containerId: 'scg-viewer',
@@ -158,9 +213,31 @@ class EditorManager {
                 }
             });
             
+            this.editors.scg.instance = editor;
+            this.editors.scg.getValue = () => {
+                if (editor.scene) {
+                    return editor.scene.exportToJson();
+                }
+                return null;
+            };
+            this.editors.scg.setValue = (value) => {
+                if (editor.scene && value) {
+                    editor.scene.importFromJson(value);
+                    editor.render.update();
+                }
+            };
+            this.editors.scg.focus = () => {
+                if (editor.render) {
+                    editor.render.container.focus();
+                }
+            };
+            
+            this.initialized.scg = true;
             console.log('[EditorManager] SCg editor initialized');
+            
         } catch (error) {
-            console.error('[EditorManager] Failed to initialize SCg:', error);
+            console.error('[EditorManager] Failed to init SCg:', error);
+            setTimeout(() => this._initScgEditor(container), 100);
         }
     }
 
@@ -182,8 +259,25 @@ class EditorManager {
             tab.classList.toggle('active', tab.dataset.type === editorType);
         });
         
-        if (editorType === 'scg' && !window.scgEditor) {
+        if (editorType === 'scg' && !this.initialized.scg) {
             this.editors.scg.initScg();
+        }
+        
+        if (editorType === 'scs' && !this.initialized.scs) {
+            // Show container first, then initialize Monaco
+            this.editors.scs.element.style.display = 'flex';
+            setTimeout(() => {
+                if (this.editors.scs.instance && this.editors.scs.instance.editor) {
+                    this.editors.scs.instance.editor.layout();
+                }
+            }, 100);
+        }
+        
+        // Trigger layout update for Monaco editor when switching
+        if (editorType === 'scs' && this.initialized.scs && this.editors.scs.instance && this.editors.scs.instance.editor) {
+            setTimeout(() => {
+                this.editors.scs.instance.editor.layout();
+            }, 50);
         }
         
         this.options.onSwitch?.(editorType);

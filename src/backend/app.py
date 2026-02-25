@@ -1,4 +1,3 @@
-
 """
 SCg Editor Backend
 
@@ -25,6 +24,9 @@ from py_sc_client import ScClient
 from py_sc_client.constants import sc_type
 from py_sc_kpm import ScKPM
 
+# Импорты дополнительных эндпоинтов
+from api_endpoints import register_additional_endpoints
+
 # =============================================================================
 # КОНФИГУРАЦИЯ
 # =============================================================================
@@ -36,6 +38,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# Регистрация дополнительных эндпоинтов
+register_additional_endpoints(app)
 
 # TODO: Раскомментировать для поддержки CORS
 # CORS(app)

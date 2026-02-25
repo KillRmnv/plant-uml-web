@@ -1,13 +1,15 @@
 /* ==========================================================================
-   Panels CSS - Resizable and Collapsible Panels
+   Panels CSS - Clean Resizable and Collapsible Panels
    ========================================================================== */
 
-/* Panel Container */
-.panel-wrapper {
+/* Panel Container - use CSS Grid for simpler layout */
+.panel-container {
     display: flex;
     flex: 1;
     overflow: hidden;
     position: relative;
+    width: 100%;
+    height: 100%;
 }
 
 /* Individual Panel */
@@ -15,64 +17,14 @@
     display: flex;
     flex-direction: column;
     background: var(--surface-color);
+    position: relative;
+    overflow: hidden;
+    min-width: 40px;
+}
+
+/* Panel border */
+.panel:not(:last-child) {
     border-right: 1px solid var(--border-color);
-    min-width: var(--panel-min-width);
-    overflow: hidden;
-    position: relative;
-    transition: width var(--transition-speed) ease;
-}
-
-.panel:last-child {
-    border-right: none;
-}
-
-/* Panel Sizes */
-.panel.size-25 { width: 25%; }
-.panel.size-33 { width: 33.33%; }
-.panel.size-50 { width: 50%; }
-.panel.size-66 { width: 66.66%; }
-.panel.size-75 { width: 75%; }
-
-/* Collapsed Panel */
-.panel.collapsed {
-    min-width: 0;
-    width: 0 !important;
-    border-right: none;
-    overflow: hidden;
-}
-
-.panel.collapsed .panel-content {
-    display: none;
-}
-
-.panel.collapsed .panel-header {
-    display: none;
-}
-
-/* Collapsed indicator */
-.panel.collapsed-indicator {
-    position: relative;
-}
-
-.panel.collapsed-indicator::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 40px;
-    background: var(--primary-color);
-    border-radius: 2px;
-    cursor: pointer;
-    z-index: 30;
-}
-
-.panel.collapsed-indicator.left::before {
-    right: -2px;
-}
-
-.panel.collapsed-indicator.right::before {
-    left: -2px;
 }
 
 /* Panel Header */
@@ -85,21 +37,14 @@
     border-bottom: 1px solid var(--border-color);
     background: var(--background-color);
     flex-shrink: 0;
+    position: relative;
+    z-index: 10;
 }
 
 .panel-title {
     font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.panel-title-icon {
-    width: 16px;
-    height: 16px;
-    opacity: 0.7;
 }
 
 .panel-actions {
@@ -107,7 +52,6 @@
     gap: 4px;
 }
 
-/* Panel Action Buttons */
 .panel-action-btn {
     width: 24px;
     height: 24px;
@@ -127,11 +71,6 @@
     color: var(--text-primary);
 }
 
-.panel-action-btn.active {
-    background: var(--primary-color);
-    color: white;
-}
-
 .panel-action-btn svg {
     width: 14px;
     height: 14px;
@@ -142,22 +81,86 @@
     flex: 1;
     overflow: hidden;
     position: relative;
-    background: var(--surface-color);
+    display: flex;
+    flex-direction: column;
 }
 
-/* Loading State */
-.panel-loading .panel-content::after {
-    content: '';
+/* ==========================================================================
+   Collapsed Panel State
+   ========================================================================== */
+
+.panel.collapsed {
+    min-width: 30px;
+    width: 30px;
+    flex: 0 0 30px;
+}
+
+.panel.collapsed .panel-content {
+    display: none;
+}
+
+.panel.collapsed .panel-header {
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    display: flex;
+    width: 30px;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    border-bottom: none;
+    border-right: 1px solid var(--border-color);
+    padding: 8px 0;
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+}
+
+.panel.collapsed .panel-title {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.panel.collapsed .panel-actions {
+    display: none;
+}
+
+/* Collapse toggle button on collapsed panel */
+.panel-collapse-toggle {
+    position: absolute;
+    top: 50%;
+    left: -10px;
+    right: auto;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 36px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    display: none;
     align-items: center;
     justify-content: center;
-    z-index: 10;
+    color: var(--text-secondary);
+    z-index: 20;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.panel-collapse-toggle:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+.panel-collapse-toggle svg {
+    width: 12px;
+    height: 12px;
+}
+
+.panel.collapsed .panel-collapse-toggle {
+    display: flex;
 }
 
 /* ==========================================================================
@@ -168,28 +171,10 @@
     width: 6px;
     cursor: col-resize;
     background: transparent;
-    transition: background var(--transition-speed);
     flex-shrink: 0;
     position: relative;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.resize-handle::before {
-    content: '';
-    width: 2px;
-    height: 40px;
-    background: var(--border-color);
-    border-radius: 1px;
-    transition: all var(--transition-speed);
-}
-
-.resize-handle:hover::before,
-.resize-handle.active::before {
-    background: var(--primary-color);
-    height: 60px;
+    z-index: 15;
+    margin: 0 -3px;
 }
 
 .resize-handle::after {
@@ -197,72 +182,21 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    left: -5px;
-    right: -5px;
+    left: 0;
+    right: 0;
+    background: transparent;
+    transition: background 0.15s;
 }
 
-.resize-handle.disabled {
-    cursor: default;
-    pointer-events: none;
-}
-
-/* ==========================================================================
-   Collapse Button
-   ========================================================================== */
-
-.panel-collapse-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 48px;
-    background: var(--surface-color);
-    border: 1px solid var(--border-color);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    z-index: 20;
-    transition: all var(--transition-speed);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.panel-collapse-btn:hover {
-    background: var(--border-color);
-    color: var(--text-primary);
-}
-
-.panel-collapse-btn.left {
-    right: -10px;
-    border-radius: 0 4px 4px 0;
-    border-left: none;
-}
-
-.panel-collapse-btn.right {
-    left: -10px;
-    border-radius: 4px 0 0 4px;
-    border-right: none;
-}
-
-.panel-collapse-btn svg {
-    width: 12px;
-    height: 12px;
-    transition: transform var(--transition-speed);
-}
-
-.panel-collapse-btn.collapsed svg {
-    transform: rotate(180deg);
+.resize-handle:hover::after,
+.resize-handle.active::after {
+    background: var(--primary-color);
+    opacity: 0.3;
 }
 
 /* ==========================================================================
    Editor Panel Specific
    ========================================================================== */
-
-.editor-panel {
-    display: flex;
-    flex-direction: column;
-}
 
 .editor-panel .panel-content {
     display: flex;
@@ -275,6 +209,7 @@
     padding: 8px 12px;
     border-bottom: 1px solid var(--border-color);
     background: var(--background-color);
+    flex-shrink: 0;
 }
 
 .editor-type-tab {
@@ -302,11 +237,6 @@
    Image Panel
    ========================================================================== */
 
-.image-panel {
-    display: flex;
-    flex-direction: column;
-}
-
 .image-panel .panel-content {
     display: flex;
     align-items: center;
@@ -315,54 +245,20 @@
     padding: 16px;
 }
 
-.image-preview {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-}
-
-.image-placeholder {
-    text-align: center;
-    color: var(--text-secondary);
-}
-
-.image-placeholder-icon {
-    width: 64px;
-    height: 64px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-}
-
-.image-placeholder-text {
-    font-size: 14px;
-    margin-bottom: 8px;
-}
-
-.image-placeholder-hint {
-    font-size: 12px;
-    opacity: 0.7;
-}
-
 /* ==========================================================================
-   Panel Theme Variants
+   Loading State
    ========================================================================== */
 
-.panel.theme-dark {
-    background: #1e1e1e;
-    border-color: #333;
-}
-
-.panel.theme-dark .panel-header {
-    background: #252526;
-    border-color: #333;
-}
-
-.panel.theme-dark .panel-title {
-    color: #ccc;
-}
-
-.panel.theme-dark .panel-content {
-    background: #1e1e1e;
+.panel-loading .panel-content::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
 }

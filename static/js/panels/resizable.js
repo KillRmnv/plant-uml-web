@@ -1,142 +1,97 @@
 /**
- * Resizable - Panel resize logic
- * Handles drag-to-resize functionality for panels
+ * Resizable - Simple panel resize logic
  */
 
 class Resizable {
-    constructor(element, options = {}) {
-        this.element = element;
+    constructor(handle, leftPanel, rightPanel, options = {}) {
+        this.handle = handle;
+        this.leftPanel = leftPanel;
+        this.rightPanel = rightPanel;
         this.options = {
-            minWidth: options.minWidth || Config.PANELS.MIN_WIDTH,
-            maxWidth: options.maxWidth || options.maxWidth || null,
-            onResize: options.onResize || (() => {}),
-            onResizeStart: options.onResizeStart || (() => {}),
+            minWidth: options.minWidth || 150,
             onResizeEnd: options.onResizeEnd || (() => {}),
         };
         
         this.isResizing = false;
+        this.isDisabled = false;
         this.startX = 0;
-        this.startWidth = 0;
+        this.startLeftWidth = 0;
+        this.startRightWidth = 0;
         
-        this.handle = null;
-        this.init();
-    }
-
-    init() {
-        this.createHandle();
         this.bindEvents();
-    }
-
-    createHandle() {
-        this.handle = document.createElement('div');
-        this.handle.className = 'resize-handle';
-        this.element.appendChild(this.handle);
     }
 
     bindEvents() {
         this.handle.addEventListener('mousedown', this.onMouseDown.bind(this));
         document.addEventListener('mousemove', this.onMouseMove.bind(this));
         document.addEventListener('mouseup', this.onMouseUp.bind(this));
-        
-        this.handle.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
-        document.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
-        document.addEventListener('touchend', this.onTouchEnd.bind(this));
+    }
+
+    disable() {
+        this.isDisabled = true;
+        this.handle.style.pointerEvents = 'none';
+        this.handle.style.cursor = 'default';
+        this.handle.style.opacity = '0.3';
+    }
+
+    enable() {
+        this.isDisabled = false;
+        this.handle.style.pointerEvents = '';
+        this.handle.style.cursor = 'col-resize';
+        this.handle.style.opacity = '';
     }
 
     onMouseDown(e) {
-        if (e.button !== 0) return;
+        if (e.button !== 0 || this.isDisabled) return;
+        
+        e.preventDefault();
         
         this.isResizing = true;
         this.startX = e.clientX;
-        this.startWidth = this.element.offsetWidth;
+        this.startLeftWidth = this.leftPanel.offsetWidth;
+        this.startRightWidth = this.rightPanel.offsetWidth;
         
         this.handle.classList.add('active');
-        this.options.onResizeStart();
-        
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
     }
 
     onMouseMove(e) {
-        if (!this.isResizing) return;
+        if (!this.isResizing || this.isDisabled) return;
         
         const deltaX = e.clientX - this.startX;
-        let newWidth = this.startWidth + deltaX;
         
-        newWidth = Math.max(this.options.minWidth, newWidth);
-        if (this.options.maxWidth) {
-            newWidth = Math.min(this.options.maxWidth, newWidth);
+        let newLeftWidth = this.startLeftWidth + deltaX;
+        let newRightWidth = this.startRightWidth - deltaX;
+        
+        if (newLeftWidth < this.options.minWidth) {
+            newLeftWidth = this.options.minWidth;
+            newRightWidth = this.startLeftWidth + this.startRightWidth - this.options.minWidth;
         }
         
-        this.element.style.width = `${newWidth}px`;
-        this.options.onResize(newWidth);
+        if (newRightWidth < this.options.minWidth) {
+            newRightWidth = this.options.minWidth;
+            newLeftWidth = this.startLeftWidth + this.startRightWidth - this.options.minWidth;
+        }
+        
+        this.leftPanel.style.flex = 'none';
+        this.rightPanel.style.flex = 'none';
+        this.leftPanel.style.width = newLeftWidth + 'px';
+        this.rightPanel.style.width = newRightWidth + 'px';
     }
 
     onMouseUp() {
-        if (!this.isResizing) return;
+        if (!this.isResizing || this.isDisabled) return;
         
         this.isResizing = false;
         this.handle.classList.remove('active');
-        
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         
-        this.options.onResizeEnd();
-    }
-
-    onTouchStart(e) {
-        if (e.touches.length !== 1) return;
-        
-        e.preventDefault();
-        this.isResizing = true;
-        this.startX = e.touches[0].clientX;
-        this.startWidth = this.element.offsetWidth;
-        
-        this.handle.classList.add('active');
-        this.options.onResizeStart();
-    }
-
-    onTouchMove(e) {
-        if (!this.isResizing || e.touches.length !== 1) return;
-        
-        e.preventDefault();
-        const deltaX = e.touches[0].clientX - this.startX;
-        let newWidth = this.startWidth + deltaX;
-        
-        newWidth = Math.max(this.options.minWidth, newWidth);
-        if (this.options.maxWidth) {
-            newWidth = Math.min(this.options.maxWidth, newWidth);
-        }
-        
-        this.element.style.width = `${newWidth}px`;
-        this.options.onResize(newWidth);
-    }
-
-    onTouchEnd() {
-        if (!this.isResizing) return;
-        
-        this.isResizing = false;
-        this.handle.classList.remove('active');
+        this.leftPanel.style.flex = '';
+        this.rightPanel.style.flex = '';
         
         this.options.onResizeEnd();
-    }
-
-    destroy() {
-        if (this.handle && this.handle.parentNode) {
-            this.handle.parentNode.removeChild(this.handle);
-        }
-        document.removeEventListener('mousemove', this.onMouseMove);
-        document.removeEventListener('mouseup', this.onMouseUp);
-        document.removeEventListener('touchmove', this.onTouchMove);
-        document.removeEventListener('touchend', this.onTouchEnd);
-    }
-
-    enable() {
-        this.handle.style.pointerEvents = '';
-    }
-
-    disable() {
-        this.handle.style.pointerEvents = 'none';
     }
 }
 
