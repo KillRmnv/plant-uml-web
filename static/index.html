@@ -105,10 +105,47 @@
     <script src="components/common/d3/d3.min.js"></script>
     <script src="components/common/context/context.js"></script>
     <script src="components/common/highlight/highlight.min.js"></script>
+    <script src="components/common/typeahead/typeahead.bundle.min.js"></script>
     <script src="components/js/file-saver/FileSaver.min.js"></script>
 
     <!-- SCWeb Core - defines sc_type constants and SCWeb namespace -->
     <script src="components/js/sc-web-core.js"></script>
+    
+    <!-- SC-Client for connecting to sc-server -->
+    <script src="js/sc-client/sc.js"></script>
+    <script>
+        // Initialize sc-client for connection to sc-server
+        (function() {
+            var SC_SERVER_URL = "ws://localhost:8090/ws_json";
+            
+            // Wait for sc namespace to be available
+            function initScClient() {
+                if (typeof sc === 'undefined' || typeof sc.ScClient === 'undefined') {
+                    console.warn('[SC-Client] sc namespace not ready, retrying...');
+                    setTimeout(initScClient, 100);
+                    return;
+                }
+                
+                try {
+                    window.scClient = new sc.ScClient(SC_SERVER_URL);
+                    console.log('[SC-Client] Connected to:', SC_SERVER_URL);
+                    
+                    // Dispatch event when scClient is ready
+                    window.dispatchEvent(new Event('scClientReady'));
+                } catch (error) {
+                    console.error('[SC-Client] Failed to initialize:', error);
+                }
+            }
+            
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initScClient);
+            } else {
+                initScClient();
+            }
+        })();
+    </script>
+    
     <script>
         // Expose sc_type constants to global scope for SCg scripts
         (function() {

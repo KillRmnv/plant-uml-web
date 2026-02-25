@@ -37,17 +37,43 @@ class ScgEditor {
     }
 
     _initScg() {
+        const self = this;
+        
         const sandbox = {
             container: 'scg-viewer',
             addr: 0,
             is_struct: false,
             format_addr: 'format_scg_json',
             resolveElementsAddr: async (identifiers) => {
-                console.log('[SCg] Resolving:', identifiers);
-                return {};
+                console.log('[SCg] Resolving identifiers:', identifiers);
+                
+                if (!window.scClient) {
+                    console.warn('[SCg] scClient not available');
+                    return {};
+                }
+                
+                try {
+                    const keynodesData = identifiers.map(id => ({ id: id, type: new sc.ScType() }));
+                    const result = await window.scClient.resolveKeynodes(keynodesData);
+                    
+                    const resolved = {};
+                    for (const id of identifiers) {
+                        if (result[id] && result[id].value) {
+                            resolved[id] = result[id].value;
+                        }
+                    }
+                    console.log('[SCg] Resolved:', resolved);
+                    return resolved;
+                } catch (error) {
+                    console.error('[SCg] Error resolving identifiers:', error);
+                    return {};
+                }
             },
             canEdit: () => true,
-            createViewersForScLinks: (links) => {},
+            createViewersForScLinks: (links) => {
+                console.log('[SCg] Create viewers for links:', links);
+                // TODO: Implement sc-link viewers if needed
+            },
         };
 
         try {
@@ -56,11 +82,53 @@ class ScgEditor {
                 containerId: 'scg-viewer',
                 canEdit: true,
                 sandbox: sandbox,
-                autocompletionVariants: (keyword, callback) => {
-                    callback([]);
+                autocompletionVariants: async (keyword, callback) => {
+                    console.log('[SCg] Autocompletion for:', keyword);
+                    
+                    if (!window.scClient) {
+                        callback([]);
+                        return;
+                    }
+                    
+                    try {
+                        // Search for links containing the keyword
+                        const results = await window.scClient.searchLinksByContents([keyword]);
+                        const suggestions = [];
+                        
+                        for (const [addr, content] of Object.entries(results)) {
+                            suggestions.push({
+                                id: addr,
+                                label: content,
+                            });
+                        }
+                        
+                        callback(suggestions);
+                    } catch (error) {
+                        console.error('[SCg] Autocompletion error:', error);
+                        callback([]);
+                    }
                 },
-                translateToSc: (callback) => {
-                    callback({});
+                translateToSc: async (callback) => {
+                    console.log('[SCg] Translating to SC');
+                    
+                    if (!window.scClient) {
+                        callback({});
+                        return;
+                    }
+                    
+                    try {
+                        // Export scene to SCn format via sc-server
+                        // This is a simplified version - full implementation would use sc-struct
+                        const json = self.editor.scene.exportToJson();
+                        
+                        // For now, return empty - full implementation would create
+                        // SCn construction in the knowledge base
+                        console.log('[SCg] Exported JSON:', json);
+                        callback({});
+                    } catch (error) {
+                        console.error('[SCg] Translation error:', error);
+                        callback({});
+                    }
                 },
             });
 
