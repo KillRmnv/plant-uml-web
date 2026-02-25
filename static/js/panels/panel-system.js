@@ -1,7 +1,6 @@
 /**
- * Panel System - Simple panel management
+ * Panel System - Simple panel management (Fixed Version)
  */
-
 class PanelSystem {
     constructor(container, options = {}) {
         this.container = container;
@@ -10,6 +9,11 @@ class PanelSystem {
         this.resizables = [];
         this.isResizing = false;
         
+        // Убедимся, что контейнер ведет себя как flex-контейнер
+        if (getComputedStyle(container).display === 'inline') {
+            container.style.display = 'flex';
+        }
+
         this.init();
     }
 
@@ -33,10 +37,13 @@ class PanelSystem {
             const panel = this.createPanelElement(def);
             this.container.appendChild(panel);
             
+            // Начальная инициализация стилей
             if (savedSizes && savedSizes[index]) {
+                // Если есть сохраненная ширина, применяем её, но не блокируем flex полностью
                 panel.style.width = savedSizes[index] + 'px';
+                panel.style.flex = '0 0 auto'; 
             } else {
-                panel.style.flex = '1';
+                panel.style.flex = '1 1 0';
             }
             
             const collapsible = new Collapsible(panel, {
@@ -54,7 +61,8 @@ class PanelSystem {
         
         this.setupResizeHandles();
         
-        setTimeout(() => this.adjustPanelSizes(), 0);
+        // Небольшая задержка для гарантированной отрисовки перед первым расчетом
+        requestAnimationFrame(() => this.adjustPanelSizes());
     }
 
     createPanelElement(definition) {
@@ -93,6 +101,9 @@ class PanelSystem {
                     this.isResizing = false;
                     this.unlockAllCollapsible();
                     this.saveState();
+                    // После ручного изменения размера мы НЕ вызываем adjustPanelSizes,
+                    // чтобы сохранить выбор пользователя. Но мы должны разрешить 
+                    // будущим событиям сворачивания перезаписать это.
                 }
             });
             
@@ -122,6 +133,9 @@ class PanelSystem {
             const leftPanel = panelElements[index];
             const rightPanel = panelElements[index + 1];
             
+            // Проверка на существование элементов (на случай если массивы рассинхронизировались)
+            if (!leftPanel || !rightPanel) return;
+
             const leftCollapsed = leftPanel.classList.contains('collapsed');
             const rightCollapsed = rightPanel.classList.contains('collapsed');
             
@@ -141,39 +155,34 @@ class PanelSystem {
         return this.panels.filter(p => p.element.classList.contains('collapsed'));
     }
 
+    /**
+     * Ключевой метод: Заставляет все видимые панели делить пространство поровну
+     */
     adjustPanelSizes() {
         const visiblePanels = this.getVisiblePanels();
-        const collapsedCount = this.getCollapsedPanels().length;
         
         if (visiblePanels.length === 0) return;
         
-        visiblePanels.forEach((panel) => {
-            panel.element.style.flex = '1 1 0';
-            panel.element.style.minWidth = '';
-            panel.element.style.maxWidth = '';
-            panel.element.style.width = '';
+        visiblePanels.forEach((panelObj) => {
+            const el = panelObj.element;
+            // Сбрасываем фиксированную ширину, чтобы flex работал
+            el.style.width = ''; 
+            el.style.minWidth = '';
+            // Разрешаем расти и сжиматься
+            el.style.flex = '1 1 0';
         });
-        
-        this.container.style.flex = '1';
     }
 
     onPanelCollapse(panelId, collapsedWidth) {
-        this.getVisiblePanels().forEach(panel => {
-            panel.element.style.flex = '';
-            panel.element.style.width = '';
-        });
-        
-        requestAnimationFrame(() => {
-            this.adjustPanelSizes();
-            this.updateResizeHandles();
-        });
+        // Сразу перераспределяем пространство между оставшимися
+        this.adjustPanelSizes();
+        this.updateResizeHandles();
     }
 
     onPanelExpand(panelId) {
-        requestAnimationFrame(() => {
-            this.adjustPanelSizes();
-            this.updateResizeHandles();
-        });
+        // При разворачивании тоже перераспределяем пространство
+        this.adjustPanelSizes();
+        this.updateResizeHandles();
     }
 
     getPanelContent(panelId) {
@@ -220,16 +229,20 @@ class PanelSystem {
         this.panels.forEach(panel => {
             const isCollapsed = panel.element.classList.contains('collapsed');
             if (isCollapsed) {
-                sizes.push(30);
+                sizes.push(30); // Фиксированная ширина свернутой
             } else {
+                // Сохраняем текущую вычисленную ширину
                 sizes.push(panel.element.offsetWidth);
             }
             collapsed[panel.definition.id] = isCollapsed;
         });
         
         try {
-            localStorage.setItem(Config.STORAGE_KEYS.PANEL_SIZES, JSON.stringify(sizes));
-            localStorage.setItem(Config.STORAGE_KEYS.PANEL_COLLAPSED, JSON.stringify(collapsed));
+            // Проверка на существование Config, чтобы не ломать код в изоляции
+            if (typeof Config !== 'undefined' && Config.STORAGE_KEYS) {
+                localStorage.setItem(Config.STORAGE_KEYS.PANEL_SIZES, JSON.stringify(sizes));
+                localStorage.setItem(Config.STORAGE_KEYS.PANEL_COLLAPSED, JSON.stringify(collapsed));
+            }
         } catch (e) {
             console.warn('[PanelSystem] Failed to save state:', e);
         }
@@ -237,8 +250,11 @@ class PanelSystem {
 
     loadSizes() {
         try {
-            const saved = localStorage.getItem(Config.STORAGE_KEYS.PANEL_SIZES);
-            return saved ? JSON.parse(saved) : null;
+            if (typeof Config !== 'undefined' && Config.STORAGE_KEYS) {
+                const saved = localStorage.getItem(Config.STORAGE_KEYS.PANEL_SIZES);
+                return saved ? JSON.parse(saved) : null;
+            }
+            return null;
         } catch (e) {
             return null;
         }
@@ -246,8 +262,11 @@ class PanelSystem {
 
     loadCollapsed() {
         try {
-            const saved = localStorage.getItem(Config.STORAGE_KEYS.PANEL_COLLAPSED);
-            return saved ? JSON.parse(saved) : null;
+            if (typeof Config !== 'undefined' && Config.STORAGE_KEYS) {
+                const saved = localStorage.getItem(Config.STORAGE_KEYS.PANEL_COLLAPSED);
+                return saved ? JSON.parse(saved) : null;
+            }
+            return null;
         } catch (e) {
             return null;
         }
@@ -256,14 +275,16 @@ class PanelSystem {
     loadState() {
         const collapsed = this.loadCollapsed();
         if (collapsed) {
-            setTimeout(() => {
+            // Используем requestAnimationFrame чтобы DOM точно был готов
+            requestAnimationFrame(() => {
                 Object.keys(collapsed).forEach(panelId => {
                     if (collapsed[panelId]) {
                         this.collapsePanel(panelId);
                     }
                 });
+                // Финальная подгонка размеров после загрузки состояния
                 this.adjustPanelSizes();
-            }, 100);
+            });
         }
     }
 

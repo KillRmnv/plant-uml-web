@@ -1,7 +1,6 @@
 /**
- * Resizable - Simple panel resize logic
+ * Resizable - Fixed Resize Logic
  */
-
 class Resizable {
     constructor(handle, leftPanel, rightPanel, options = {}) {
         this.handle = handle;
@@ -23,6 +22,7 @@ class Resizable {
 
     bindEvents() {
         this.handle.addEventListener('mousedown', this.onMouseDown.bind(this));
+        // Важно: слушаем события на document, чтобы не терять курсор при быстром движении
         document.addEventListener('mousemove', this.onMouseMove.bind(this));
         document.addEventListener('mouseup', this.onMouseUp.bind(this));
     }
@@ -48,12 +48,17 @@ class Resizable {
         
         this.isResizing = true;
         this.startX = e.clientX;
+        // Запоминаем текущую ширину в пикселях
         this.startLeftWidth = this.leftPanel.offsetWidth;
         this.startRightWidth = this.rightPanel.offsetWidth;
         
         this.handle.classList.add('active');
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
+        
+        // ВАЖНО: Фиксируем панели в "жестком" режиме перед началом движения
+        this.leftPanel.style.flex = '0 0 auto';
+        this.rightPanel.style.flex = '0 0 auto';
     }
 
     onMouseMove(e) {
@@ -64,6 +69,7 @@ class Resizable {
         let newLeftWidth = this.startLeftWidth + deltaX;
         let newRightWidth = this.startRightWidth - deltaX;
         
+        // Ограничения минимальной ширины
         if (newLeftWidth < this.options.minWidth) {
             newLeftWidth = this.options.minWidth;
             newRightWidth = this.startLeftWidth + this.startRightWidth - this.options.minWidth;
@@ -74,13 +80,12 @@ class Resizable {
             newLeftWidth = this.startLeftWidth + this.startRightWidth - this.options.minWidth;
         }
         
-        this.leftPanel.style.flex = 'none';
-        this.rightPanel.style.flex = 'none';
+        // Применяем ширину напрямую. Flex уже установлен в '0 0 auto' в onMouseDown.
         this.leftPanel.style.width = newLeftWidth + 'px';
         this.rightPanel.style.width = newRightWidth + 'px';
     }
 
-    onMouseUp() {
+    onMouseUp(e) {
         if (!this.isResizing || this.isDisabled) return;
         
         this.isResizing = false;
@@ -88,13 +93,12 @@ class Resizable {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         
-        this.leftPanel.style.flex = '';
-        this.rightPanel.style.flex = '';
+        // ИСПРАВЛЕНИЕ: НЕ сбрасываем flex в ''!
+        // Оставляем '0 0 auto', чтобы панели сохранили заданную ширину (width).
+        // Если сбросить flex, CSS правило 'flex: 1' пересчитает размеры и отменит ресайз.
+        this.leftPanel.style.flex = '0 0 auto';
+        this.rightPanel.style.flex = '0 0 auto';
         
         this.options.onResizeEnd();
     }
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Resizable;
 }

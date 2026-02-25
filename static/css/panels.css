@@ -10,6 +10,8 @@
     position: relative;
     width: 100%;
     height: 100%;
+    /* Важно: убираем отступы, чтобы flex работал корректно */
+    box-sizing: border-box; 
 }
 
 /* Individual Panel */
@@ -20,12 +22,21 @@
     position: relative;
     overflow: hidden;
     min-width: 40px;
+    
+    /* Базовое поведение: занимать доступное место */
+    flex: 1 1 0; 
+    
+    box-sizing: border-box;
+    
+    /* УДАЛИТЬ или ЗАКОММЕНТИРОВАТЬ эту строку: */
+    /* transition: flex 0.3s ease, width 0.3s ease, min-width 0.3s ease; */ 
 }
 
-/* Panel border */
+/* Panel border - убираем у последней, чтобы не было двойной рамки */
 .panel:not(:last-child) {
     border-right: 1px solid var(--border-color);
 }
+
 
 /* Panel Header */
 .panel-header {
@@ -89,75 +100,87 @@
    Collapsed Panel State
    ========================================================================== */
 
-.panel.collapsed {
-    min-width: 30px;
-    width: 30px;
-    flex: 0 0 30px;
-}
+   .panel.collapsed {
+       /* ИСПРАВЛЕНИЕ 2: Жестко фиксируем размеры через !important, 
+          чтобы перебить инлайн-стили JS и flex: 1 1 0 */
+       flex: 0 0 30px !important;
+       width: 30px !important;
+       min-width: 30px !important;
+       
+       /* Убираем transition при сворачивании, чтобы не было задержки 
+          перед применением жестких размеров, или оставляем для плавности */
+       transition: flex 0.3s ease, width 0.3s ease, min-width 0.3s ease;
+       overflow: hidden; /* Скрываем все, что вылезает */
+   }
 
-.panel.collapsed .panel-content {
-    display: none;
-}
+   .panel.collapsed .panel-content {
+       display: none;
+   }
 
-.panel.collapsed .panel-header {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 30px;
-    height: 100%;
-    flex-direction: column;
-    justify-content: center;
-    border-bottom: none;
-    border-right: 1px solid var(--border-color);
-    padding: 8px 0;
-    writing-mode: vertical-lr;
-    transform: rotate(180deg);
-}
+   /* Заголовок в свернутом состоянии */
+   .panel.collapsed .panel-header {
+       position: absolute;
+       top: 0;
+       left: 0;
+       /* Растягиваем на всю высоту */
+       height: 100%; 
+       width: 100%;
+       flex-direction: column;
+       justify-content: center;
+       align-items: center;
+        border-bottom: none;
+           /* Убираем правую границу, так как она есть у самой панели .panel */
+        border-right: none; 
+        padding: 8px 0;
+        writing-mode: vertical-lr;
+        transform: rotate(180deg);
+        background: var(--background-color); /* Фон должен быть сплошным */
+        z-index: 5;
+    }
 
-.panel.collapsed .panel-title {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    transform: rotate(180deg);
-    font-size: 11px;
-    white-space: nowrap;
-    overflow: visible;
-}
+    .panel.collapsed .panel-title {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        /* Убираем двойной поворот, если header уже повернут */
+        transform: none; 
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: visible;
+        pointer-events: none; /* Чтобы текст не мешал кликам */
+    }
+    .panel.collapsed .panel-actions {
+        display: none;
+    }
 
-.panel.collapsed .panel-actions {
-    display: none;
-}
 
 /* Collapse toggle button on collapsed panel */
 .panel-collapse-toggle {
     position: absolute;
+    /* ИСПРАВЛЕНИЕ 3: Позиционируем по центру правого края свернутой панели */
     top: 50%;
-    left: -10px;
-    right: auto;
+    right: -10px; /* Сдвигаем немного вправо, чтобы было удобно кликать */
     transform: translateY(-50%);
     width: 20px;
     height: 36px;
     background: var(--surface-color);
     border: 1px solid var(--border-color);
-    border-radius: 0 4px 4px 0;
+   border-radius: 0 4px 4px 0;
     cursor: pointer;
-    display: none;
+    display: none; /* Скрыта по умолчанию */
     align-items: center;
     justify-content: center;
     color: var(--text-secondary);
     z-index: 20;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
-}
-
-.panel-collapse-toggle:hover {
-    background: var(--border-color);
-    color: var(--text-primary);
-}
-
-.panel-collapse-toggle svg {
-    width: 12px;
-    height: 12px;
-}
+   }
+   .panel.collapsed .panel-collapse-toggle {
+       display: flex;
+   }
+   
+   .panel-collapse-toggle:hover {
+       background: var(--border-color);
+       color: var(--text-primary);
+   }
 
 .panel.collapsed .panel-collapse-toggle {
     display: flex;
@@ -166,33 +189,55 @@
 /* ==========================================================================
    Resize Handle
    ========================================================================== */
+   .resize-handle {
+       width: 6px;
+       cursor: col-resize;
+       background: transparent;
+       flex-shrink: 0; /* Ручка не сжимается */
+       position: relative;
+       z-index: 15;
+       /* ИСПРАВЛЕНИЕ 4: Убираем отрицательные марджины, они конфликтуют с borders */
+       margin: 0; 
+       /* Центрируем ручку на границе панелей */
+       box-sizing: border-box;
+   }
 
-.resize-handle {
-    width: 6px;
-    cursor: col-resize;
-    background: transparent;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 15;
-    margin: 0 -3px;
-}
 
-.resize-handle::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: transparent;
-    transition: background 0.15s;
-}
 
-.resize-handle:hover::after,
-.resize-handle.active::after {
-    background: var(--primary-color);
-    opacity: 0.3;
-}
+   /* Визуальная часть ручки */
+   .resize-handle::after {
+       content: '';
+       position: absolute;
+       top: 0;
+       bottom: 0;
+       left: 50%; /* По центру div-а ручки */
+       transform: translateX(-50%);
+       width: 2px;
+       background: var(--border-color);
+       transition: background 0.15s;
+   }
+
+   .resize-handle:hover::after,
+   .resize-handle.active::after {
+       background: var(--primary-color);
+       width: 4px; /* Чуть шире при наведении */
+   }
+   /* ИСПРАВЛЕНИЕ 5: Скрываем ручку, если соседняя панель свернута */
+   /* Это дублирует JS логику disable(), но для страховки визуально */
+   .panel.collapsed + .resize-handle,
+   .resize-handle:has(+ .panel.collapsed) {
+       /* Если поддерживается :has, иначе полагаемся на JS класс .disabled */
+       /* cursor: default; */
+   }
+   /* Класс, который JS добавляет при отключении */
+   .resize-handle.disabled {
+       pointer-events: none;
+       cursor: default;
+       opacity: 0; /* Полностью скрываем, если нельзя ресайзить */
+   }
+   .resize-handle.disabled::after {
+       background: transparent;
+   }
 
 /* ==========================================================================
    Editor Panel Specific
