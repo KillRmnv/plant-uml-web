@@ -177,8 +177,65 @@
     <script src="js/panels/resizable.js"></script>
     <script src="js/panels/collapsible.js"></script>
     <script src="js/panels/panel-system.js"></script>
+    
+    <!-- SCS Language for Monaco Editor -->
+    <script src="js/editors/scs-bundle/scs-language.js"></script>
+    
+    <!-- Wait for Monaco to load, then initialize -->
+    <script>
+        function initScsEditor() {
+            if (typeof monaco === 'undefined') {
+                console.warn('[App] Monaco not ready, retrying...');
+                setTimeout(initScsEditor, 100);
+                return;
+            }
+            
+            // Define ScsEditor class for Monaco (compatible with editor-manager.js)
+            window.ScsEditor = function ScsEditor(container, value, theme) {
+                this._container = container;
+                this.editor = monaco.editor.create(container, {
+                    language: 'scs',
+                    theme: theme || 'scs',
+                    automaticLayout: true,
+                });
+                
+                if (value) {
+                    this.content = value;
+                }
+            };
+            
+            window.ScsEditor.prototype.getValue = function() {
+                return this.editor.getValue();
+            };
+            
+            window.ScsEditor.prototype.setValue = function(newValue) {
+                this.editor.setValue(newValue);
+            };
+            
+            Object.defineProperty(window.ScsEditor.prototype, 'content', {
+                get: function() { return this.editor.getValue(); },
+                set: function(v) { this.editor.setValue(v); }
+            });
+            
+            window.ScsEditor.prototype.focus = function() {
+                this.editor.focus();
+            };
+            
+            console.log('[App] ScsEditor class defined');
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initScsEditor);
+        } else {
+            initScsEditor();
+        }
+        
+        // Also try after monacoLoaded event
+        window.addEventListener('monacoLoaded', initScsEditor);
+    </script>
+    
     <script src="js/editors/editor-manager.js"></script>
-    <script src="js/editors/scs-editor.js"></script>
     <script src="js/editors/scg-editor.js"></script>
     <script src="js/render/strategy.js"></script>
     <script src="js/render/scs-render.js"></script>

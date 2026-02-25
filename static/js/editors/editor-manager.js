@@ -111,8 +111,8 @@ class EditorManager {
                     console.log('[EditorManager] ScS editor initialized');
                     
                     if (this.options.onChange) {
-                        container.querySelector('.scs-editor-container')?.addEventListener('input', (e) => {
-                            this.options.onChange('scs', e.target.value);
+                        editor.editor.onDidChangeModelContent(() => {
+                            this.options.onChange('scs', editor.getValue());
                         });
                     }
                 } catch (error) {
