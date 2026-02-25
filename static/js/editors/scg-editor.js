@@ -149,6 +149,12 @@ class ScgEditor {
             this.editor.render.update();
             this.editor.scene.layout();
 
+            // Initialize search integration after editor is ready
+            if (window.SCSearchIntegration) {
+                SCSearchIntegration.init(this.editor);
+                console.log('[ScgEditor] Search integration initialized');
+            }
+
             console.log('[ScgEditor] SCg editor initialized');
         } catch (error) {
             console.error('[ScgEditor] Failed to initialize SCg:', error);

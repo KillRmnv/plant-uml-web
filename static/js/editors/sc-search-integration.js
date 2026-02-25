@@ -1,6 +1,6 @@
 /**
  * SC Search Integration - Full integration with sc-web approach
- * Uses DistanceBasedSCgSearcher and SCgStructTranslator from sc-web
+ * Uses SCgStructTranslator and implements depth-based search for nodes
  */
 
 const SCSearchIntegration = {
@@ -8,7 +8,8 @@ const SCSearchIntegration = {
     sandbox: null,
     searcher: null,
     translator: null,
-    maxElements: 10,  // Maximum elements to load (try 3-10 for testing)
+    currentAddr: null,
+    maxDepth: 4,  // Maximum depth for neighborhood search
 
     init: function(editor) {
         this.editor = editor;
@@ -20,20 +21,6 @@ const SCSearchIntegration = {
         });
         
         console.log('[SCSearchIntegration] Initialized');
-    },
-
-    /**
-     * Resolve identifier for an object
-     */
-    _resolveIdtf: function(obj, addr) {
-        if (this.sandbox && this.sandbox.getIdentifier) {
-            this.sandbox.getIdentifier(addr, function(idtf) {
-                if (idtf) {
-                    obj.setText(idtf);
-                    console.log('[SCSearchIntegration] Set identifier for', addr, ':', idtf);
-                }
-            });
-        }
     },
 
     /**
@@ -55,9 +42,10 @@ const SCSearchIntegration = {
             return;
         }
 
-        console.log('[SCSearchIntegration] All checks passed, starting search...');
-        
         const addrNum = parseInt(addr);
+        this.currentAddr = addrNum;
+        
+        console.log('[SCSearchIntegration] All checks passed, starting search...');
         
         // Clear existing content
         this._clearScene();
@@ -68,7 +56,7 @@ const SCSearchIntegration = {
         // Initialize translator
         this._initTranslator();
         
-        // Initialize and run searcher
+        // Run search with depth
         await this._runSearch(addrNum);
     },
 
@@ -97,21 +85,27 @@ const SCSearchIntegration = {
     },
 
     /**
-     * Create sandbox object
+     * Create sandbox object - mimics ComponentSandbox from sc-web
      */
     _createSandbox: function(addr) {
         const self = this;
         
         this.sandbox = {
             addr: new sc.ScAddr(addr),
+            is_struct: true,  // Treat as struct for translator compatibility
+            format_addr: 'format_scg_json',
             
-            // Event handlers
+            // Event for struct updates - called by search functions
             eventStructUpdate: function(data) {
+                console.log('[SCSearchIntegration] eventStructUpdate called');
                 if (self.translator && self.translator.updateFromSc) {
-                    self.translator.updateFromSc(data);
+                    self.translator.updateFromSc(data).catch(err => {
+                        console.error('[SCSearchIntegration] Error in updateFromSc:', err);
+                    });
                 }
             },
             
+            // Layout functions
             layout: function(scene) {
                 scene.layout();
             },
@@ -120,29 +114,133 @@ const SCSearchIntegration = {
                 self.editor.render.update();
             },
             
+            // Get identifier for an sc-element - using scHelper approach
             getIdentifier: function(addr, callback) {
-                // addr can be string or number
-                const addrStr = addr.toString();
-                console.log('[SCSearchIntegration] Resolving identifier for:', addrStr);
+                const addrNum = typeof addr === 'number' ? addr : (addr.value || addr._value);
+                const addrObj = new sc.ScAddr(addrNum);
                 
-                if (typeof SCWeb !== 'undefined' && SCWeb.core && SCWeb.core.Server) {
-                    SCWeb.core.Server.resolveIdentifiers([addrStr]).then(function(idtfs) {
-                        const idtf = idtfs[addrStr] || '';
-                        console.log('[SCSearchIntegration] Got identifier for', addrStr, ':', idtf);
-                        callback(idtf);
-                    }).catch(function(err) {
-                        console.error('[SCSearchIntegration] Error resolving identifier:', err);
-                        callback('');
-                    });
+                console.log('[SCSearchIntegration] getIdentifier for:', addrNum);
+                
+                // Use scHelper to get identifier via nrel_main_idtf
+                if (window.scHelper && window.scKeynodes) {
+                    window.scHelper.searchNodeByIdentifier(addrObj, window.scKeynodes["nrel_main_idtf"])
+                        .then(idtf => {
+                            console.log('[SCSearchIntegration] Got identifier via nrel_main_idtf:', idtf);
+                            callback(idtf || '');
+                        })
+                        .catch(err => {
+                            console.warn('[SCSearchIntegration] Error getting identifier:', err);
+                            callback('');
+                        });
                 } else {
-                    console.warn('[SCSearchIntegration] SCWeb.core.Server not available');
+                    console.warn('[SCSearchIntegration] scHelper or scKeynodes not available');
                     callback('');
                 }
             },
             
-            // For search
+            // Can edit check
+            canEdit: function() {
+                return true;
+            },
+            
+            can_edit: true,
+            
+            // For keynodes resolution
+            keynodes: window.scKeynodes || {},
+            
+            // Container info
+            container: 'scg-viewer',
+            
+            // Create viewers for sc-links
+            createViewersForScLinks: function(links) {
+                console.log('[SCSearchIntegration] createViewersForScLinks:', links);
+            },
+            
+            // Create viewers for sc-structs
+            createViewersForScStructs: function(structs) {
+                console.log('[SCSearchIntegration] createViewersForScStructs:', structs);
+            },
+            
+            // Resolve elements addr
+            resolveElementsAddr: function(parentSelector) {
+                console.log('[SCSearchIntegration] resolveElementsAddr:', parentSelector);
+            },
+            
+            // Get current language
+            getCurrentLanguage: function() {
+                if (typeof SCWeb !== 'undefined' && SCWeb.core && SCWeb.core.Translation) {
+                    return SCWeb.core.Translation.getCurrentLanguage();
+                }
+                return 0;
+            },
+            
+            // Get languages
+            getLanguages: function() {
+                if (typeof SCWeb !== 'undefined' && SCWeb.core && SCWeb.core.Translation) {
+                    return SCWeb.core.Translation.getLanguages();
+                }
+                return [];
+            },
+            
+            // Do default command
+            doDefaultCommand: function(args) {
+                console.log('[SCSearchIntegration] doDefaultCommand:', args);
+            },
+            
+            // Once updable objects
+            onceUpdatableObjects: {},
+            
+            // For update content
             updateContent: function() {
-                // Already handled by our search
+                console.log('[SCSearchIntegration] updateContent called');
+            },
+            
+            // Event for data append
+            eventDataAppend: function(data) {
+                console.log('[SCSearchIntegration] eventDataAppend:', data);
+            },
+            
+            // Get objects to translate
+            getObjectsToTranslate: function() {
+                const scene = self.editor.scene;
+                if (scene && scene.getScAddrs) {
+                    return scene.getScAddrs();
+                }
+                return [];
+            },
+            
+            // Apply translation
+            updateTranslation: function(translationMap) {
+                console.log('[SCSearchIntegration] updateTranslation:', translationMap);
+                if (self.editor && self.editor.scene) {
+                    for (const [addr, text] of Object.entries(translationMap)) {
+                        const obj = self.editor.scene.getObjectByScAddr(addr);
+                        if (obj) {
+                            obj.setText(text);
+                        }
+                    }
+                    if (self.editor.render) {
+                        self.editor.render.updateTexts();
+                    }
+                }
+            },
+            
+            // Child windows
+            childs: {},
+            
+            // Add children
+            _appendChilds: function(windows) {
+                this.childs = Object.assign(this.childs, windows);
+            },
+            
+            // Remove child
+            removeChild: function() {
+                this.childs = {};
+            },
+            
+            // Update result
+            updateResult: function() {
+                console.log('[SCSearchIntegration] updateResult called');
             }
         };
         
@@ -150,284 +248,23 @@ const SCSearchIntegration = {
     },
 
     /**
-     * Initialize the translator
+     * Initialize the translator using SCgStructTranslator from sc-web
      */
     _initTranslator: function() {
         const self = this;
         
-        // Create a simplified version of SCgStructFromScTranslatorImpl
-        this.translator = {
-            _editor: this.editor,
-            _sandbox: this.sandbox,
-            _elements: new Map(),
-            _appendTasks: [],
-            _removeTasks: [],
-            _maxBatch: 50,
-            _batchDelay: 100,
-            _timer: null,
-            
-            updateFromSc: async function(data) {
-                await this._processUpdate(data);
-                this._scheduleFlush();
-            },
-            
-            _processUpdate: async function(data) {
-                const scene = this._editor.scene;
-                const sceneElementState = data.sceneElementState;
-                const isAdded = sceneElementState !== SCgObjectState.RemovedFromMemory;
-                
-                if (!isAdded) {
-                    // Handle removal
-                    const addr = data.sceneElement.value;
-                    const obj = scene.getObjectByScAddr(addr);
-                    if (obj) {
-                        scene.deleteObjects([obj]);
-                    }
-                    return;
-                }
-                
-                // Get element type
-                let sceneElementType = data.sceneElementType;
-                if (!sceneElementType) {
-                    const types = await scClient.getElementsTypes([data.sceneElement]);
-                    sceneElementType = types[0];
-                }
-                
-                const type = sceneElementType.value;
-                const level = data.sceneElementLevel || SCgObjectLevel.First;
-                
-                // Handle connector (has source and target)
-                if (data.sceneElementSource && data.sceneElementTarget) {
-                    const sourceAddr = data.sceneElementSource.value;
-                    const targetAddr = data.sceneElementTarget.value;
-                    
-                    // Add source node if not exists
-                    if (!scene.getObjectByScAddr(sourceAddr)) {
-                        const sourceType = data.sceneElementSourceType ? data.sceneElementSourceType.value : sc_type_node;
-                        self._addNode(sourceAddr, sourceType, level, sceneElementState);
-                    }
-                    
-                    // Add target node if not exists  
-                    if (!scene.getObjectByScAddr(targetAddr)) {
-                        const targetType = data.sceneElementTargetType ? data.sceneElementTargetType.value : sc_type_node;
-                        self._addNode(targetAddr, targetType, level, sceneElementState);
-                    }
-                    
-                    // Add connector
-                    self._addConnector(
-                        data.sceneElement.value,
-                        type,
-                        sourceAddr,
-                        targetAddr,
-                        level,
-                        sceneElementState
-                    );
-                }
-                // Handle connector found directly
-                else if (sceneElementType.isConnector && sceneElementType.isConnector()) {
-                    try {
-                        const [source, target] = await window.scHelper.getConnectorElements(data.sceneElement);
-                        if (source.isValid() && target.isValid()) {
-                            // Add source and target nodes
-                            const sourceType = (await scClient.getElementsTypes([source]))[0];
-                            const targetType = (await scClient.getElementsTypes([target]))[0];
-                            
-                            if (!scene.getObjectByScAddr(source.value)) {
-                                self._addNode(source.value, sourceType.value, level, sceneElementState);
-                            }
-                            if (!scene.getObjectByScAddr(target.value)) {
-                                self._addNode(target.value, targetType.value, level, sceneElementState);
-                            }
-                            
-                            self._addConnector(
-                                data.sceneElement.value,
-                                type,
-                                source.value,
-                                target.value,
-                                level,
-                                sceneElementState
-                            );
-                        }
-                    } catch (e) {
-                        console.log('[SCSearchIntegration] Error getting connector elements:', e);
-                    }
-                }
-                // Handle node/link
-                else {
-                    self._addNode(data.sceneElement.value, type, level, sceneElementState);
-                }
-            },
-            
-            _addNode: function(addr, type, level, state) {
-                const scene = this.editor.scene;
-                
-                // Debug logging
-                console.log('[SCSearchIntegration] _addNode called:', {
-                    addr: addr,
-                    type: type,
-                    typeIsNumber: typeof type === 'number',
-                    level: level,
-                    state: state
-                });
-                
-                // Ensure type is a number
-                const typeNum = typeof type === 'number' ? type : (type.value || 0);
-                
-                // Check if already exists
-                if (scene.getObjectByScAddr(addr)) {
-                    return;
-                }
-                
-                // Generate random position
-                const posX = 100 * Math.random();
-                const posY = 100 * Math.random();
-                
-                // Debug: check if SCg.Vector3 is defined
-                if (typeof SCg === 'undefined' || !SCg.Vector3) {
-                    console.error('[SCSearchIntegration] SCg.Vector3 is NOT defined!');
-                }
-                if (typeof SCg.Creator === 'undefined' || !SCg.Creator.generateNode) {
-                    console.error('[SCSearchIntegration] SCg.Creator.generateNode is NOT defined!');
-                }
-                
-                const pos = new SCg.Vector3(posX, posY, 0);
-                console.log('[SCSearchIntegration] Creating node at:', posX, posY, 'Vector3:', pos.x, pos.y, pos.z);
-                
-                // Determine if it's a link or node
-                if ((typeNum & sc_type_node_link) === sc_type_node_link) {
-                    // It's a link
-                    const containerId = 'scg-link-' + addr;
-                    const obj = SCg.Creator.generateLink(
-                        typeNum,
-                        pos,
-                        containerId,
-                        ''
-                    );
-                    if (obj) {
-                        obj.setLevel(level);
-                        obj.setObjectState(state);
-                        scene.appendObject(obj);
-                        obj.setScAddr(addr);
-                        self._resolveIdtf(obj, addr);
-                        console.log('[SCSearchIntegration] Link created:', addr);
-                    } else {
-                        console.error('[SCSearchIntegration] Failed to create link:', addr);
-                    }
-                } else if (typeNum & sc_type_node) {
-                    // It's a node
-                    const obj = SCg.Creator.generateNode(
-                        typeNum,
-                        pos,
-                        ''
-                    );
-                    if (obj) {
-                        obj.setLevel(level);
-                        obj.setObjectState(state);
-                        scene.appendObject(obj);
-                        obj.setScAddr(addr);
-                        self._resolveIdtf(obj, addr);
-                        console.log('[SCSearchIntegration] Node created:', addr, 'type:', typeNum, 'pos:', obj.position ? obj.position.x + ',' + obj.position.y : 'NO POS');
-                    } else {
-                        console.error('[SCSearchIntegration] Failed to create node:', addr);
-                    }
-                }
-            },
-            
-            _addConnector: function(addr, type, sourceAddr, targetAddr, level, state) {
-                const scene = this.editor.scene;
-                
-                // Ensure type is a number
-                const typeNum = typeof type === 'number' ? type : (type.value || sc_type_arc_common);
-                
-                console.log('[SCSearchIntegration] _addConnector:', {
-                    addr: addr,
-                    sourceAddr: sourceAddr,
-                    targetAddr: targetAddr,
-                    type: typeNum
-                });
-                
-                let sourceObj = scene.getObjectByScAddr(sourceAddr);
-                let targetObj = scene.getObjectByScAddr(targetAddr);
-                
-                console.log('[SCSearchIntegration] Connector source pos:', sourceObj && sourceObj.position ? sourceObj.position.x + ',' + sourceObj.position.y : 'NO POS');
-                console.log('[SCSearchIntegration] Connector target pos:', targetObj && targetObj.position ? targetObj.position.x + ',' + targetObj.position.y : 'NO POS');
-                
-                if (!sourceObj || !targetObj) {
-                    console.warn('[SCSearchIntegration] Cannot create connector: endpoints not found', sourceAddr, targetAddr);
-                    return;
-                }
-                
-                // Check if already exists
-                if (scene.getObjectByScAddr(addr)) {
-                    return;
-                }
-                
-                // Handle self-loop: create a copy of the object
-                if (sourceAddr === targetAddr) {
-                    console.log('[SCSearchIntegration] Self-loop detected, creating copy');
-                    
-                    // Check for existing connectors to this node
-                    const existingConnectors = scene.connectors.filter(c => c.source === targetObj || c.target === targetObj);
-                    
-                    // Create a copy with offset position
-                    const copyPos = new SCg.Vector3(
-                        targetObj.position.x + 30 + existingConnectors.length * 20,
-                        targetObj.position.y + 30 + existingConnectors.length * 20,
-                        0
-                    );
-                    
-                    // Create new node as copy
-                    const copyObj = SCg.Creator.generateNode(targetObj.sc_type, copyPos, '');
-                    copyObj.setLevel(level);
-                    copyObj.setObjectState(state);
-                    scene.appendObject(copyObj);
-                    const copyAddr = targetAddr + '_copy_' + existingConnectors.length;
-                    copyObj.setScAddr(copyAddr);
-                    
-                    // Resolve identifier for copy node
-                    self._resolveIdtf(copyObj, targetAddr);
-                    
-                    console.log('[SCSearchIntegration] Created copy node at:', copyPos.x, copyPos.y);
-                    
-                    // Use copy as target
-                    targetObj = copyObj;
-                }
-                
-                const connector = SCg.Creator.generateConnector(sourceObj, targetObj, typeNum);
-                if (connector) {
-                    connector.setLevel(level);
-                    connector.setObjectState(state);
-                    scene.appendObject(connector);
-                    connector.setScAddr(addr);
-                    console.log('[SCSearchIntegration] Connector created:', addr);
-                } else {
-                    console.error('[SCSearchIntegration] Failed to create connector:', addr);
-                }
-            },
-            
-            _scheduleFlush: function() {
-                if (this._timer) return;
-                
-                const self = this;
-                this._timer = setTimeout(function() {
-                    self._timer = null;
-                    self._flush();
-                }, this._batchDelay);
-            },
-            
-            _flush: function() {
-                console.log('[SCSearchIntegration] _flush called - nodes:', this._editor.scene.nodes.length, 'connectors:', this._editor.scene.connectors.length);
-                this._editor.scene.layout();
-                this._editor.render.update();
-                console.log('[SCSearchIntegration] _flush complete');
-            }
-        };
+        if (typeof window.SCgStructTranslator === 'undefined') {
+            console.error('[SCSearchIntegration] SCgStructTranslator is not defined!');
+            return;
+        }
+        
+        this.translator = new window.SCgStructTranslator(this.editor, this.sandbox);
         
         console.log('[SCSearchIntegration] Translator initialized');
     },
 
     /**
-     * Run the search using DistanceBasedSCgSearcher approach
+     * Run the search - determines element type and uses appropriate search
      */
     _runSearch: async function(addrNum) {
         const self = this;
@@ -436,30 +273,32 @@ const SCSearchIntegration = {
         try {
             console.log('[SCSearchIntegration] Starting search for addr:', addrNum);
             
-            // Search all elements connected to our address
-            await this._searchConnectedElements(scAddr);
+            // Get element type
+            const types = await window.scClient.getElementsTypes([scAddr]);
+            const mainType = types[0];
+            console.log('[SCSearchIntegration] Element type:', mainType.value, 'is_struct:', mainType.value & sc_type_node_structure);
             
-            // Final layout update
-            console.log('[SCSearchIntegration] Before layout - checking node positions:');
-            this.editor.scene.nodes.forEach((node, i) => {
-                console.log(`  Node ${i}: addr=${node.sc_addr}, pos=${node.position ? node.position.x + ',' + node.position.y : 'NO POSITION'}`);
-            });
+            // Check if this is a structure
+            const isStructure = (mainType.value & sc_type_node_structure) === sc_type_node_structure;
             
-            this.editor.scene.layout();
-            this.editor.render.update();
-            
-            console.log('[SCSearchIntegration] After layout and update - checking node positions:');
-            this.editor.scene.nodes.forEach((node, i) => {
-                console.log(`  Node ${i}: addr=${node.sc_addr}, pos=${node.position ? node.position.x + ',' + node.position.y : 'NO POSITION'}`);
-            });
-            console.log('[SCSearchIntegration] After layout - checking connectors:');
-            this.editor.scene.connectors.forEach((conn, i) => {
-                const src = conn.source ? `src=${conn.source.position ? conn.source.position.x : '?'}` : 'no src';
-                const tgt = conn.target ? `tgt=${conn.target.position ? conn.target.position.x : '?'}` : 'no tgt';
-                console.log(`  Connector ${i}: ${src}, ${tgt}`);
-            });
-            
-            console.log('[SCSearchIntegration] Search complete');
+            if (isStructure) {
+                // It's a structure - use DistanceBasedSCgSearcher
+                console.log('[SCSearchIntegration] Element is a structure, using DistanceBasedSCgSearcher');
+                
+                if (typeof SCWeb !== 'undefined' && SCWeb.core && SCWeb.core.DistanceBasedSCgSearcher) {
+                    this.searcher = new SCWeb.core.DistanceBasedSCgSearcher(this.sandbox);
+                    const status = await this.searcher.searchContent([scAddr]);
+                    console.log('[SCSearchIntegration] Search status:', status);
+                    await this.searcher.initAppendRemoveElementsUpdate();
+                }
+            } else {
+                // It's a node/link - use depth-based search
+                console.log('[SCSearchIntegration] Element is a node/link, using depth-based search with max depth:', this.maxDepth);
+                await this._depthBasedSearch(scAddr, this.maxDepth);
+                
+                // Initialize real-time updates for the main element
+                await this._initRealTimeUpdates(scAddr);
+            }
             
             // Navigate to the main node
             const mainNode = this.editor.scene.getObjectByScAddr(addrNum);
@@ -467,50 +306,90 @@ const SCSearchIntegration = {
                 this._navigateToNode(mainNode);
             }
             
+            console.log('[SCSearchIntegration] Search complete');
+            
         } catch (error) {
             console.error('[SCSearchIntegration] Search error:', error);
         }
     },
 
     /**
-     * Search connected elements (simplified version of DistanceBasedSCgSearcher)
+     * Depth-based search (BFS) for neighborhood exploration
      */
-    _searchConnectedElements: async function(mainAddr) {
-        const visited = new Set();
-        const queue = [mainAddr];
-        let count = 0;
+    _depthBasedSearch: async function(mainAddr, maxDepth) {
+        console.log('[SCSearchIntegration] Starting depth-based search from:', mainAddr.value, 'maxDepth:', maxDepth);
         
-        while (queue.length > 0 && count < this.maxElements) {
-            const current = queue.shift();
-            const currentHash = current.value;
+        const visited = new Map(); // addr -> {type, level}
+        const queue = [{addr: mainAddr, level: 0, parentArc: null}];
+        
+        // Add main node first
+        const mainType = (await window.scClient.getElementsTypes([mainAddr]))[0];
+        console.log('[SCSearchIntegration] Main node type:', mainType?.value);
+        visited.set(mainAddr.value, {type: mainType, level: 0});
+        
+        // Send main node to translator
+        this.sandbox.eventStructUpdate({
+            sceneElement: mainAddr,
+            sceneElementType: mainType,
+            sceneElementState: SCgObjectState.FromMemory,
+            sceneElementLevel: SCgObjectLevel.First
+        });
+        console.log('[SCSearchIntegration] Added main node to scene');
+        
+        // Process queue with BFS
+        let iteration = 0;
+        const maxIterations = 1000; // Safety limit
+        
+        while (queue.length > 0 && iteration < maxIterations) {
+            iteration++;
+            const {addr: currentAddr, level: currentLevel} = queue.shift();
             
-            if (visited.has(currentHash)) continue;
-            visited.add(currentHash);
+            console.log('[SCSearchIntegration] Processing:', currentAddr.value, 'at level', currentLevel);
             
-            // Search for arcs from this element
-            const template1 = new sc.ScTemplate();
-            template1.triple(
-                current,
-                [sc.ScType.VarPermPosArc, '_arc'],
+            // Skip if already at max depth
+            if (currentLevel >= maxDepth) continue;
+            
+            // Search for outgoing connections
+            const outgoingTemplate = new sc.ScTemplate();
+            outgoingTemplate.triple(
+                currentAddr,
+                [sc.ScType.Arc, '_arc'],
                 [sc.ScType.Unknown, '_target']
             );
             
-            // Search for arcs to this element
-            const template2 = new sc.ScTemplate();
-            template2.triple(
+            // Search for incoming connections
+            const incomingTemplate = new sc.ScTemplate();
+            incomingTemplate.triple(
                 [sc.ScType.Unknown, '_source'],
-                '_arc',
-                current
+                [sc.ScType.Arc, '_arc'],
+                currentAddr
             );
             
             let results = [];
-            try {
-                results = await window.scClient.searchByTemplate(template1);
-            } catch (e) {}
             
             try {
-                results = results.concat(await window.scClient.searchByTemplate(template2));
-            } catch (e) {}
+                const outgoing = await window.scClient.searchByTemplate(outgoingTemplate);
+                console.log('[SCSearchIntegration] Outgoing template results:', outgoing.length);
+                for (const r of outgoing) {
+                    console.log('[SCSearchIntegration]   Outgoing - arc:', r.get('_arc')?.value, 'source:', r.get('_source')?.value, 'target:', r.get('_target')?.value);
+                }
+                results.push(...outgoing);
+            } catch (e) {
+                console.warn('[SCSearchIntegration] Outgoing template error:', e);
+            }
+            
+            try {
+                const incoming = await window.scClient.searchByTemplate(incomingTemplate);
+                console.log('[SCSearchIntegration] Incoming template results:', incoming.length);
+                for (const r of incoming) {
+                    console.log('[SCSearchIntegration]   Incoming - arc:', r.get('_arc')?.value, 'source:', r.get('_source')?.value, 'target:', r.get('_target')?.value);
+                }
+                results.push(...incoming);
+            } catch (e) {
+                console.warn('[SCSearchIntegration] Incoming template error:', e);
+            }
+            
+            console.log('[SCSearchIntegration] Total connections found at level', currentLevel, ':', results.length);
             
             // Process results
             for (const result of results) {
@@ -518,48 +397,149 @@ const SCSearchIntegration = {
                 const source = result.get('_source');
                 const target = result.get('_target');
                 
-                // Determine source and target
-                const sourceAddr = source || target;
-                const targetAddr = target || source;
+                if (!arc) continue;
                 
-                if (!sourceAddr || !targetAddr) continue;
+                console.log('[SCSearchIntegration] Processing connection - arc:', arc.value, 'source:', source?.value, 'target:', target?.value);
                 
-                const srcHash = sourceAddr.value;
-                const tgtHash = targetAddr.value;
-                
-                // Add to queue if not visited
-                if (!visited.has(srcHash) && count < this.maxElements) {
-                    queue.push(sourceAddr);
-                }
-                if (!visited.has(tgtHash) && count < this.maxElements) {
-                    queue.push(targetAddr);
+                // Determine connected element (not the current one)
+                let connectedAddr = null;
+                if (source && source.value === currentAddr.value) {
+                    connectedAddr = target;
+                } else if (target && target.value === currentAddr.value) {
+                    connectedAddr = source;
                 }
                 
-                // Get element types
-                const types = await window.scClient.getElementsTypes([sourceAddr, targetAddr, arc]);
-                const sourceType = types[0];
-                const targetType = types[1];
-                const arcType = types[2];
+                if (!connectedAddr || !connectedAddr.isValid()) continue;
                 
-                // Notify translator about the elements
+                const connHash = connectedAddr.value;
+                
+                // Skip if already visited
+                if (visited.has(connHash)) continue;
+                
+                // Get types for arc and connected element
+                const arcType = (await window.scClient.getElementsTypes([arc]))[0];
+                const connectedType = (await window.scClient.getElementsTypes([connectedAddr]))[0];
+                const currentType = visited.get(currentAddr.value).type;
+                
+                console.log('[SCSearchIntegration]   Arc type:', arcType?.value, 'Connected type:', connectedType?.value);
+                
+                const nextLevel = currentLevel + 1;
+                
+                // Mark as visited
+                visited.set(connHash, {type: connectedType, level: nextLevel});
+                
+                // Add to queue for further exploration
+                queue.push({addr: connectedAddr, level: nextLevel});
+                
+                // Send update to translator - this adds the element to the scene
                 this.sandbox.eventStructUpdate({
                     sceneElement: arc,
                     sceneElementType: arcType,
                     sceneElementState: SCgObjectState.FromMemory,
-                    sceneElementLevel: SCgObjectLevel.First,
-                    sceneElementSource: sourceAddr,
-                    sceneElementSourceType: sourceType,
-                    sceneElementSourceLevel: SCgObjectLevel.First,
-                    sceneElementTarget: targetAddr,
-                    sceneElementTargetType: targetType,
-                    sceneElementTargetLevel: SCgObjectLevel.First,
+                    sceneElementLevel: this._scgLevelFromDepth(nextLevel),
+                    sceneElementSource: source || currentAddr,
+                    sceneElementSourceType: source ? connectedType : currentType,
+                    sceneElementSourceLevel: this._scgLevelFromDepth(source ? nextLevel : currentLevel),
+                    sceneElementTarget: target || currentAddr,
+                    sceneElementTargetType: target ? connectedType : currentType,
+                    sceneElementTargetLevel: this._scgLevelFromDepth(target ? nextLevel : currentLevel)
                 });
                 
-                count++;
+                // Also send update for the connected node itself
+                this.sandbox.eventStructUpdate({
+                    sceneElement: connectedAddr,
+                    sceneElementType: connectedType,
+                    sceneElementState: SCgObjectState.FromMemory,
+                    sceneElementLevel: this._scgLevelFromDepth(nextLevel)
+                });
+                
+                console.log('[SCSearchIntegration]   Added to scene - element:', connectedAddr.value, 'type:', connectedType?.value);
             }
         }
         
-        console.log('[SCSearchIntegration] Processed', count, 'elements');
+        console.log('[SCSearchIntegration] Depth-based search complete. Visited:', visited.size);
+    },
+
+    /**
+     * Convert depth to SCgObjectLevel
+     */
+    _scgLevelFromDepth: function(depth) {
+        const levels = [
+            SCgObjectLevel.First,
+            SCgObjectLevel.Second,
+            SCgObjectLevel.Third,
+            SCgObjectLevel.Fourth,
+            SCgObjectLevel.Fifth,
+            SCgObjectLevel.Sixth,
+            SCgObjectLevel.Seventh
+        ];
+        return levels[Math.min(depth, levels.length - 1)];
+    },
+
+    /**
+     * Initialize real-time updates for a node
+     */
+    _initRealTimeUpdates: async function(mainAddr) {
+        try {
+            // Subscribe to outgoing arc generation
+            const generateArcParams = new sc.ScEventSubscriptionParams(
+                mainAddr,
+                sc.ScEventType.AfterGenerateOutgoingArc,
+                async (elAddr, connector, otherAddr) => {
+                    if (!this.sandbox.eventStructUpdate) return;
+                    
+                    const type = (await window.scClient.getElementsTypes([connector]))[0];
+                    if (!type.equal(sc.ScType.ConstPermPosArc)) return;
+                    
+                    const otherType = (await window.scClient.getElementsTypes([otherAddr]))[0];
+                    
+                    this.sandbox.eventStructUpdate({
+                        sceneElement: connector,
+                        sceneElementType: type,
+                        sceneElementState: SCgObjectState.MergedWithMemory,
+                        sceneElementLevel: SCgObjectLevel.First,
+                        sceneElementSource: mainAddr,
+                        sceneElementSourceType: (await window.scClient.getElementsTypes([mainAddr]))[0],
+                        sceneElementSourceLevel: SCgObjectLevel.First,
+                        sceneElementTarget: otherAddr,
+                        sceneElementTargetType: otherType,
+                        sceneElementTargetLevel: SCgObjectLevel.First
+                    });
+                    
+                    this.sandbox.eventStructUpdate({
+                        sceneElement: otherAddr,
+                        sceneElementType: otherType,
+                        sceneElementState: SCgObjectState.MergedWithMemory,
+                        sceneElementLevel: SCgObjectLevel.First
+                    });
+                }
+            );
+            
+            // Subscribe to arc deletion
+            const eraseArcParams = new sc.ScEventSubscriptionParams(
+                mainAddr,
+                sc.ScEventType.BeforeEraseOutgoingArc,
+                async (elAddr, connector, otherAddr) => {
+                    if (!this.sandbox.eventStructUpdate) return;
+                    if (await window.scHelper.checkConnector(elAddr.value, sc.ScType.ConstPermPosArc, otherAddr.value)) return;
+                    
+                    this.sandbox.eventStructUpdate({
+                        sceneElement: otherAddr,
+                        sceneElementState: SCgObjectState.RemovedFromMemory
+                    });
+                }
+            );
+            
+            const [generateEvent, eraseEvent] = await window.scClient.createElementaryEventSubscriptions([
+                generateArcParams,
+                eraseArcParams
+            ]);
+            
+            console.log('[SCSearchIntegration] Real-time updates initialized for:', mainAddr.value);
+            
+        } catch (error) {
+            console.error('[SCSearchIntegration] Error initializing real-time updates:', error);
+        }
     },
 
     /**
@@ -584,6 +564,50 @@ const SCSearchIntegration = {
         // Select the node
         scene.appendSelection(modelObject);
         render.update();
+    },
+
+    /**
+     * Update translations (identifiers) for all elements in the scene
+     */
+    _updateTranslations: function() {
+        if (!this.editor || !this.editor.scene) return;
+        
+        const scene = this.editor.scene;
+        const addrs = scene.getScAddrs ? scene.getScAddrs() : [];
+        
+        if (addrs.length === 0) return;
+        
+        console.log('[SCSearchIntegration] Updating translations for', addrs.length, 'elements');
+        
+        if (typeof SCWeb !== 'undefined' && SCWeb.core && SCWeb.core.Translation) {
+            SCWeb.core.Translation.translate(addrs).then((namesMap) => {
+                for (const [addr, text] of Object.entries(namesMap)) {
+                    const obj = scene.getObjectByScAddr(addr);
+                    if (obj) {
+                        obj.setText(text);
+                    }
+                }
+                if (this.editor.render) {
+                    this.editor.render.updateTexts();
+                }
+                console.log('[SCSearchIntegration] Translations updated');
+            }).catch(err => {
+                console.warn('[SCSearchIntegration] Translation error:', err);
+            });
+        }
+    },
+
+    /**
+     * Clean up
+     */
+    destroy: function() {
+        if (this.searcher && this.searcher.destroyAppendRemoveElementsUpdate) {
+            this.searcher.destroyAppendRemoveElementsUpdate();
+        }
+        this.translator = null;
+        this.searcher = null;
+        this.sandbox = null;
+        console.log('[SCSearchIntegration] Destroyed');
     }
 };
 
