@@ -228,6 +228,17 @@ class EditorManager {
             });
             
             this.editors.scg.instance = editor;
+            
+            // Initialize search integration
+            console.log('[EditorManager] Checking SCSearchIntegration:', typeof window.SCSearchIntegration);
+            if (window.SCSearchIntegration) {
+                console.log('[EditorManager] Calling SCSearchIntegration.init()');
+                window.SCSearchIntegration.init(editor);
+                console.log('[EditorManager] SCSearchIntegration.init() called');
+            } else {
+                console.error('[EditorManager] SCSearchIntegration not found!');
+            }
+            
             this.editors.scg.getValue = () => {
                 if (editor.scene) {
                     return editor.scene.exportToJson();
