@@ -1,0 +1,193 @@
+/* ==========================================================================
+   Editor Styles
+   ========================================================================== */
+
+/* ScS Editor (Text) */
+.scs-editor-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.scs-textarea {
+    flex: 1;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    resize: none;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--surface-color);
+}
+
+.scs-textarea:focus {
+    outline: none;
+}
+
+.scs-textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+/* Editor Toolbar */
+.editor-toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--background-color);
+}
+
+.editor-toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all var(--transition-speed);
+}
+
+.editor-toolbar-btn:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+.editor-toolbar-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.editor-toolbar-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.editor-toolbar-divider {
+    width: 1px;
+    background: var(--border-color);
+    margin: 0 4px;
+}
+
+/* SCg Editor Container */
+.scg-editor-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.scg-editor-container #scg-viewer {
+    width: 100%;
+    height: 100%;
+}
+
+/* Editor Status */
+.editor-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--background-color);
+    border-top: 1px solid var(--border-color);
+}
+
+.editor-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-color);
+}
+
+.editor-status-dot.error {
+    background: var(--error-color);
+}
+
+.editor-status-dot.warning {
+    background: var(--warning-color);
+}
+
+/* Editor Modes */
+.editor-mode-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    background: var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+}
+
+.editor-mode-indicator svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Syntax Highlighting Placeholder */
+.syntax-highlight {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.syntax-highlight .keyword {
+    color: #c678dd;
+}
+
+.syntax-highlight .string {
+    color: #98c379;
+}
+
+.syntax-highlight .number {
+    color: #d19a66;
+}
+
+.syntax-highlight .comment {
+    color: #5c6370;
+    font-style: italic;
+}
+
+.syntax-highlight .operator {
+    color: #56b6c2;
+}
+
+/* Line Numbers */
+.line-numbers {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    padding: 16px 8px;
+    text-align: right;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    background: var(--background-color);
+    border-right: 1px solid var(--border-color);
+    user-select: none;
+    overflow: hidden;
+}
+
+.line-number {
+    height: 1.6em;
+}
+
+/* Minimap (future) */
+.minimap {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 80px;
+    background: var(--background-color);
+    border-left: 1px solid var(--border-color);
+}

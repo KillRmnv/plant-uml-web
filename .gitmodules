@@ -9,3 +9,7 @@
 [submodule "external/py-sc-kpm"]
 	path = external/py-sc-kpm
 	url = https://github.com/ostis-ai/py-sc-kpm.git
+
+[submodule "external/scs-js-editor"]
+	path = external/scs-js-editor
+	url = https://github.com/ostis-dev/scs-js-editor.git
