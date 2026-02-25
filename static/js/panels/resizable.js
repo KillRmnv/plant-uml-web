@@ -1,5 +1,5 @@
 /**
- * Resizable - Fixed Resize Logic
+ * Resizable - Fixed version: preserves size after drag
  */
 class Resizable {
     constructor(handle, leftPanel, rightPanel, options = {}) {
@@ -22,7 +22,6 @@ class Resizable {
 
     bindEvents() {
         this.handle.addEventListener('mousedown', this.onMouseDown.bind(this));
-        // Важно: слушаем события на document, чтобы не терять курсор при быстром движении
         document.addEventListener('mousemove', this.onMouseMove.bind(this));
         document.addEventListener('mouseup', this.onMouseUp.bind(this));
     }
@@ -48,7 +47,6 @@ class Resizable {
         
         this.isResizing = true;
         this.startX = e.clientX;
-        // Запоминаем текущую ширину в пикселях
         this.startLeftWidth = this.leftPanel.offsetWidth;
         this.startRightWidth = this.rightPanel.offsetWidth;
         
@@ -56,7 +54,7 @@ class Resizable {
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
         
-        // ВАЖНО: Фиксируем панели в "жестком" режиме перед началом движения
+        // ФИКСАЦИЯ: Переключаем панели в режим фиксированной ширины
         this.leftPanel.style.flex = '0 0 auto';
         this.rightPanel.style.flex = '0 0 auto';
     }
@@ -80,7 +78,7 @@ class Resizable {
             newLeftWidth = this.startLeftWidth + this.startRightWidth - this.options.minWidth;
         }
         
-        // Применяем ширину напрямую. Flex уже установлен в '0 0 auto' в onMouseDown.
+        // Применяем ширину напрямую
         this.leftPanel.style.width = newLeftWidth + 'px';
         this.rightPanel.style.width = newRightWidth + 'px';
     }
@@ -93,11 +91,13 @@ class Resizable {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         
-        // ИСПРАВЛЕНИЕ: НЕ сбрасываем flex в ''!
-        // Оставляем '0 0 auto', чтобы панели сохранили заданную ширину (width).
-        // Если сбросить flex, CSS правило 'flex: 1' пересчитает размеры и отменит ресайз.
+        // === ГЛАВНОЕ ИСПРАВЛЕНИЕ ===
+        // НЕ сбрасываем flex в ''! Оставляем '0 0 auto', чтобы width в пикселях работал.
+        // Панели вернутся в flex: 1 1 0 только при вызове adjustPanelSizes() 
+        // (при сворачивании другой панели или ресайзе окна)
         this.leftPanel.style.flex = '0 0 auto';
         this.rightPanel.style.flex = '0 0 auto';
+        // ===========================
         
         this.options.onResizeEnd();
     }
