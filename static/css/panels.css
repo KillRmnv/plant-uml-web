@@ -307,3 +307,39 @@
     justify-content: center;
     z-index: 10;
 }
+
+/* ==========================================================================
+   Editor Search Container
+   ========================================================================== */
+
+.editor-search-container {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-color);
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.editor-search-container input {
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 13px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--surface-color);
+    color: var(--text-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.editor-search-container input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.editor-search-container input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}

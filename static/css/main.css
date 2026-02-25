@@ -147,6 +147,21 @@ html, body {
     color: white;
 }
 
+/* Text-based toolbar buttons */
+.toolbar-btn:not(:has(svg)) {
+    width: auto;
+    min-width: 40px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.toolbar-btn:not(:has(svg)):hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
 .toolbar-btn svg {
     width: 18px;
     height: 18px;

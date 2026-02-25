@@ -18,30 +18,44 @@ class EditorManager {
     }
 
     init() {
-        this.renderTabs();
+        this.createSearchContainer();
         this.createEditors();
         this.switchTo(this.currentEditor);
     }
 
-    renderTabs() {
-        const tabsContainer = document.createElement('div');
-        tabsContainer.className = 'editor-type-tabs';
-        
-        tabsContainer.innerHTML = `
-            <button class="editor-type-tab active" data-type="scs">ScS</button>
-            <button class="editor-type-tab" data-type="scg">SCg</button>
+    createSearchContainer() {
+        const searchContainer = document.createElement('div');
+        searchContainer.className = 'editor-search-container';
+        searchContainer.style.cssText = `
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--surface-color);
+            gap: 8px;
         `;
         
-        this.container.appendChild(tabsContainer);
+        searchContainer.innerHTML = `
+            <input type="text" 
+                   id="scg-search-input-panel" 
+                   class="typeahead form-control"
+                   placeholder="Search in knowledge base..."
+                   style="width: 100%; flex: 1;">
+        `;
         
-        tabsContainer.addEventListener('click', (e) => {
-            const tab = e.target.closest('.editor-type-tab');
-            if (tab) {
-                this.switchTo(tab.dataset.type);
+        this.container.appendChild(searchContainer);
+        
+        // Initialize search when SCg editor is ready
+        setTimeout(() => {
+            if (typeof SCgSearch !== 'undefined' && window.scgEditor) {
+                // Update search input reference
+                const searchInput = document.getElementById('scg-search-input-panel');
+                if (searchInput && !searchInput.dataset.initialized) {
+                    searchInput.dataset.initialized = 'true';
+                    console.log('[EditorManager] Search container created');
+                }
             }
-        });
-        
-        this.tabsContainer = tabsContainer;
+        }, 500);
     }
 
     createEditors() {
@@ -232,6 +246,12 @@ class EditorManager {
                 }
             };
             
+            // Initialize search functionality
+            if (typeof SCgSearch !== 'undefined') {
+                SCgSearch.init(editor);
+                console.log('[EditorManager] SCg search initialized');
+            }
+            
             this.initialized.scg = true;
             console.log('[EditorManager] SCg editor initialized');
             
@@ -254,10 +274,11 @@ class EditorManager {
             editor.element.style.display = type === editorType ? 'flex' : 'none';
         });
         
-        const tabs = this.tabsContainer.querySelectorAll('.editor-type-tab');
-        tabs.forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.type === editorType);
-        });
+        // tabs removed - switching via toolbar buttons
+        // const tabs = this.tabsContainer.querySelectorAll('.editor-type-tab');
+        // tabs.forEach(tab => {
+        //     tab.classList.toggle('active', tab.dataset.type === editorType);
+        // });
         
         if (editorType === 'scg' && !this.initialized.scg) {
             this.editors.scg.initScg();

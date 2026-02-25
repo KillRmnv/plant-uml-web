@@ -37,20 +37,18 @@
         <!-- Editor Toolbar -->
         <div class="editor-toolbar">
             <button class="toolbar-btn" data-mode="scs" data-tooltip="ScS Editor">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="4 7 4 4 20 4 20 7"></polyline>
-                    <line x1="9" y1="20" x2="15" y2="20"></line>
-                    <line x1="12" y1="4" x2="12" y2="20"></line>
-                </svg>
+                ScS
             </button>
             <button class="toolbar-btn" data-mode="scg" data-tooltip="SCg Editor">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <line x1="12" y1="2" x2="12" y2="9"></line>
-                    <line x1="12" y1="15" x2="12" y2="22"></line>
-                </svg>
+                ScG
             </button>
+            
+            <!-- Search Container -->
+            <div class="search-container">
+                <input id="scg-search-input" type="text" 
+                       class="typeahead form-control" 
+                       placeholder="Search in knowledge base...">
+            </div>
             
             <div style="flex: 1;"></div>
             
@@ -276,6 +274,7 @@
     
     <script src="js/editors/editor-manager.js"></script>
     <script src="js/editors/scg-editor.js"></script>
+    <script src="js/editors/scg-search.js"></script>
     <script src="js/render/strategy.js"></script>
     <script src="js/render/scs-render.js"></script>
     <script src="js/render/scg-render.js"></script>
