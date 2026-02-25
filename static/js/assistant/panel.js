@@ -21,20 +21,17 @@ class AssistantPanel {
         });
         
         this.chatWindow = new ChatWindow(this.chatWindowContainer, {
-            onMessage: (content) => this.onMessage(content),
+            onMessage: (content, isFirst) => this.onMessage(content, isFirst),
+            onBack: () => this.showChatList(),
         });
         
-        if (this.chatList.chats.length === 0) {
-            this.chatList.createNewChat();
-        } else if (this.chatList.currentChatId) {
-            this.loadChatMessages(this.chatList.currentChatId);
-        }
+        this.showChatList();
     }
 
     render() {
         this.container.innerHTML = `
             <div class="assistant-panel">
-                <div class="chat-list-container" id="chat-list" style="display: none;"></div>
+                <div class="chat-list-container" id="chat-list"></div>
                 <div class="chat-window-container" id="chat-window"></div>
             </div>
         `;
@@ -46,22 +43,31 @@ class AssistantPanel {
     onChatCreated(chat) {
         this.chatListContainer.style.display = 'none';
         this.chatWindowContainer.style.display = 'flex';
+        this.chatWindow.setTitle(chat.title);
         this.chatWindow.clear();
     }
 
     onChatSelected(chatId) {
+        const chat = this.chatList.chats.find(c => c.id === chatId);
         this.chatListContainer.style.display = 'none';
         this.chatWindowContainer.style.display = 'flex';
+        this.chatWindow.setTitle(chat ? chat.title : 'Chat');
         this.loadChatMessages(chatId);
     }
 
     onChatDeleted(chatId) {
         if (this.chatList.chats.length === 0) {
-            this.chatList.createNewChat();
+            this.chatListContainer.style.display = 'block';
+            this.chatWindowContainer.style.display = 'none';
         } else if (!this.chatList.currentChatId) {
             this.chatListContainer.style.display = 'block';
             this.chatWindowContainer.style.display = 'none';
         }
+    }
+
+    showChatList() {
+        this.chatListContainer.style.display = 'block';
+        this.chatWindowContainer.style.display = 'none';
     }
 
     async loadChatMessages(chatId) {
@@ -71,7 +77,7 @@ class AssistantPanel {
         }
     }
 
-    onMessage(content) {
+    onMessage(content, isFirst) {
         const chatId = this.chatList.currentChatId;
         if (!chatId) return;
         
@@ -81,7 +87,7 @@ class AssistantPanel {
             timestamp: new Date().toISOString(),
         };
         
-        this.chatList.addMessage(chatId, message);
+        this.chatList.addMessage(chatId, message, isFirst);
         
         const assistantMessage = {
             role: 'assistant',

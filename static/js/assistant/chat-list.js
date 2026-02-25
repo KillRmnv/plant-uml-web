@@ -154,14 +154,27 @@ class ChatList {
         return this.chats.find(c => c.id === this.currentChatId);
     }
 
-    addMessage(chatId, message) {
+    addMessage(chatId, message, isFirst = false) {
         const chat = this.chats.find(c => c.id === chatId);
         if (chat) {
             chat.messages.push(message);
             chat.preview = message.content.substring(0, 50);
+            
+            if (isFirst && message.role === 'user') {
+                chat.title = this.extractTitle(message.content);
+            }
+            
             this.saveToStorage();
             this.render();
         }
+    }
+    
+    extractTitle(text) {
+        const firstSentence = text.split(/[.!?]/)[0].trim();
+        if (firstSentence.length > 50) {
+            return firstSentence.substring(0, 47) + '...';
+        }
+        return firstSentence || 'New Chat';
     }
 }
 

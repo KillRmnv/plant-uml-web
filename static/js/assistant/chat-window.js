@@ -7,6 +7,7 @@ class ChatWindow {
         this.container = container;
         this.options = options;
         this.isTyping = false;
+        this.isFirstMessage = true;
         this.init();
     }
 
@@ -14,9 +15,19 @@ class ChatWindow {
         this.render();
     }
 
-    render() {
+    render(title = 'Chat') {
         this.container.innerHTML = `
             <div class="chat-window">
+                <div class="chat-header">
+                    <button class="panel-action-btn back-btn" title="Back to chats">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                    </button>
+                    <span class="chat-header-title">${this.escapeHtml(title)}</span>
+                    <div style="width: 32px;"></div>
+                </div>
                 <div class="chat-messages" id="chat-messages">
                     <div class="assistant-empty">
                         <svg class="assistant-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -50,6 +61,13 @@ class ChatWindow {
     bindEvents() {
         const input = this.container.querySelector('.chat-input');
         const sendBtn = this.container.querySelector('.chat-send-btn');
+        const backBtn = this.container.querySelector('.back-btn');
+        
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                this.options.onBack?.();
+            });
+        }
         
         input.addEventListener('input', () => {
             this.autoResize(input);
@@ -85,12 +103,15 @@ class ChatWindow {
         const content = this.input.value.trim();
         if (!content) return;
         
+        const isFirst = this.isFirstMessage;
+        this.isFirstMessage = false;
+        
         this.addMessage('user', content);
         this.input.value = '';
         this.autoResize(this.input);
         this.sendBtn.disabled = true;
         
-        this.options.onMessage?.(content);
+        this.options.onMessage?.(content, isFirst);
         
         this.showTyping();
     }
@@ -180,10 +201,22 @@ class ChatWindow {
             this.addMessage(msg.role, msg.content, false);
         });
         
+        if (messages.some(m => m.role === 'user')) {
+            this.isFirstMessage = false;
+        }
+        
         this.scrollToBottom();
     }
 
+    setTitle(title) {
+        const titleEl = this.container.querySelector('.chat-header-title');
+        if (titleEl) {
+            titleEl.textContent = title;
+        }
+    }
+
     clear() {
+        this.isFirstMessage = true;
         this.render();
     }
 }
