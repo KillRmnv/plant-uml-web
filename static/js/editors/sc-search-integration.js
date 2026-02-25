@@ -124,9 +124,23 @@ const SCSearchIntegration = {
                 // Use scHelper to get identifier via nrel_main_idtf
                 if (window.scHelper && window.scKeynodes) {
                     window.scHelper.searchNodeByIdentifier(addrObj, window.scKeynodes["nrel_main_idtf"])
-                        .then(idtf => {
-                            console.log('[SCSearchIntegration] Got identifier via nrel_main_idtf:', idtf);
-                            callback(idtf || '');
+                        .then(idtfAddr => {
+                            console.log('[SCSearchIntegration] Got identifier addr:', idtfAddr);
+                            
+                            // idtfAddr is ScAddr, need to get link contents
+                            if (idtfAddr && idtfAddr.isValid()) {
+                                return window.scClient.getLinkContents([idtfAddr]);
+                            }
+                            return null;
+                        })
+                        .then(contents => {
+                            if (contents && contents.length > 0) {
+                                const text = contents[0].content || '';
+                                console.log('[SCSearchIntegration] Got identifier content:', text);
+                                callback(text);
+                            } else {
+                                callback('');
+                            }
                         })
                         .catch(err => {
                             console.warn('[SCSearchIntegration] Error getting identifier:', err);
@@ -340,14 +354,16 @@ const SCSearchIntegration = {
         let iteration = 0;
         const maxIterations = 1000; // Safety limit
         
+        // Only process first level (level 0 = initial node)
+        // This shows only immediate neighbors of the starting node
         while (queue.length > 0 && iteration < maxIterations) {
             iteration++;
             const {addr: currentAddr, level: currentLevel} = queue.shift();
             
             console.log('[SCSearchIntegration] Processing:', currentAddr.value, 'at level', currentLevel);
             
-            // Skip if already at max depth
-            if (currentLevel >= maxDepth) continue;
+            // Stop after processing level 0 - only show immediate neighbors
+            if (currentLevel > 0) break;
             
             // Search for outgoing connections
             const outgoingTemplate = new sc.ScTemplate();
@@ -394,12 +410,19 @@ const SCSearchIntegration = {
             // Process results
             for (const result of results) {
                 const arc = result.get('_arc');
-                const source = result.get('_source');
-                const target = result.get('_target');
                 
                 if (!arc) continue;
                 
-                console.log('[SCSearchIntegration] Processing connection - arc:', arc.value, 'source:', source?.value, 'target:', target?.value);
+                // Use scHelper.getConnectorElements to get source and target
+                let source, target;
+                try {
+                    [source, target] = await window.scHelper.getConnectorElements(arc);
+                } catch (e) {
+                    console.warn('[SCSearchIntegration] Error getting connector elements:', e);
+                    continue;
+                }
+                
+                console.log('[SCSearchIntegration]   Arc:', arc.value, 'source:', source?.value, 'target:', target?.value);
                 
                 // Determine connected element (not the current one)
                 let connectedAddr = null;
@@ -425,11 +448,11 @@ const SCSearchIntegration = {
                 
                 const nextLevel = currentLevel + 1;
                 
+                // Only process first level - don't add to queue for further exploration
+                // This ensures we only show immediate neighbors of the starting node
+                
                 // Mark as visited
                 visited.set(connHash, {type: connectedType, level: nextLevel});
-                
-                // Add to queue for further exploration
-                queue.push({addr: connectedAddr, level: nextLevel});
                 
                 // Send update to translator - this adds the element to the scene
                 this.sandbox.eventStructUpdate({
