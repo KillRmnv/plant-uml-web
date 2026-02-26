@@ -1,7 +1,56 @@
 /**
- * Editor Manager - Switch between ScS and SCg editors
+ * =============================================================================
+ * Editor Manager - Documentation
+ * =============================================================================
+ * 
+ * Назначение:
+ * -----------
+ * Управляет переключением между ScS-редактором и SCg-редактором.
+ * Создает и инициализирует оба редактора, предоставляет единый интерфейс
+ * для работы с ними.
+ * 
+ * Основные функции:
+ * ---------------
+ * 1. Создание контейнеров для редакторов
+ * 2. Инициализация ScS-редактора (Monaco)
+ * 3. Инициализация SCg-редактора (визуальный граф)
+ * 4. Переключение между редакторами
+ * 5. Поиск в базе знаний через SCg
+ * 
+ * Архитектура:
+ * ------------
+ * - EditorManager создает два редактора: ScS и SCg
+ * - ScS использует Monaco Editor для текстового редактирования
+ * - SCg использует SCg.Editor для визуального редактирования графов
+ * - Переключение происходит через switchTo(type)
+ * 
+ * Sandbox для SCg:
+ * ----------------
+ * При инициализации SCg создается sandbox-объект с callback-ами:
+ * - resolveElementsAddr: преобразование идентификаторов в sc-адреса
+ * - getIdentifier: получение идентификатора по sc-адресу
+ * - eventStructUpdate: callback при изменении структуры
+ * - updateContent: загрузка контента по ключевому элементу
+ * 
+ * Интеграция поиска:
+ * ------------------
+ * - При вводе в поле поиска и нажатии Enter вызывается SCgNeighborhoodSearch
+ * - SCgNeighborhoodSearch.search(query) запускает поиск
+ * - Результаты отображаются на сцене SCg
+ * 
+ * =============================================================================
  */
 
+/**
+ * =============================================================================
+ * EditorManager
+ * =============================================================================
+ * 
+ * Основной класс управления редакторами.
+ * 
+ * @param {HTMLElement} container - DOM-контейнер для редакторов
+ * @param {Object} options - Настройки (onChange, onSwitch callback-и)
+ */
 class EditorManager {
     constructor(container, options = {}) {
         this.container = container;
@@ -45,17 +94,23 @@ class EditorManager {
         
         this.container.appendChild(searchContainer);
         
-        // Initialize search when SCg editor is ready
-        setTimeout(() => {
-            if (typeof SCgSearch !== 'undefined' && window.scgEditor) {
-                // Update search input reference
-                const searchInput = document.getElementById('scg-search-input-panel');
-                if (searchInput && !searchInput.dataset.initialized) {
-                    searchInput.dataset.initialized = 'true';
-                    console.log('[EditorManager] Search container created');
+        // Add Enter key handler for search (using keypress to match typeahead behavior)
+        const searchInput = document.getElementById('scg-search-input-panel');
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' || e.which === 13) {
+                e.preventDefault();
+                e.stopPropagation();
+                const query = searchInput.value.trim();
+                console.log('[EditorManager] Enter pressed, query:', query);
+                if (query && this.editors.scg && this.editors.scg.search) {
+                    console.log('[EditorManager] Calling search.search()...');
+                    this.editors.scg.search.search(query);
+                } else if (!this.editors.scg?.search) {
+                    console.warn('[EditorManager] Search not available yet');
                 }
             }
-        }, 500);
+        });
+        console.log('[EditorManager] Search input handler attached');
     }
 
     createEditors() {
@@ -181,23 +236,75 @@ class EditorManager {
             
             const sandbox = {
                 container: 'scg-viewer',
-                addr: 0,
-                is_struct: false,
+                addr: new sc.ScAddr(),
+                is_struct: true,
                 format_addr: 'format_scg_json',
+                eventStructUpdate: null,
+                layout: (scene) => {
+                    if (scene && typeof scene.layout === 'function') {
+                        scene.layout();
+                    }
+                },
+                postLayout: (scene) => {
+                    if (scene && typeof scene.updateRender === 'function') {
+                        scene.updateRender();
+                    }
+                },
+                onceUpdatableObjects: {},
                 resolveElementsAddr: async (identifiers) => {
-                    console.log('[SCg] Resolving:', identifiers);
-                    return {};
+                    if (!window.scClient) return {};
+                    try {
+                        const keynodesData = identifiers.map(id => ({ id: id, type: new sc.ScType() }));
+                        const result = await window.scClient.resolveKeynodes(keynodesData);
+                        const resolved = {};
+                        for (const id of identifiers) {
+                            if (result[id] && result[id].value) {
+                                resolved[id] = result[id].value;
+                            }
+                        }
+                        return resolved;
+                    } catch (error) {
+                        console.error('[SCg] Error resolving identifiers:', error);
+                        return {};
+                    }
                 },
                 canEdit: () => true,
                 createViewersForScLinks: (links) => {},
-                updateContent: (addr) => {
-                    console.log('[SCg] updateContent called', addr);
+                getIdentifier: function (addr, callback) {
+                    if (!addr) {
+                        callback('');
+                        return;
+                    }
+                    
+                    const addrValue = addr.value || addr;
+                    const numericAddr = typeof addrValue === 'number' ? addrValue : parseInt(addrValue);
+                    
+                    if (SCWeb && SCWeb.core && SCWeb.core.Server) {
+                        SCWeb.core.Server.resolveIdentifiers([numericAddr]).then((idtfs) => {
+                            callback(idtfs[numericAddr] || '');
+                        }).catch(() => {
+                            callback('');
+                        });
+                    } else {
+                        callback('');
+                    }
                 },
-                getIdentifier: (addr, callback) => {
-                    callback('');
+                updateContent: async (keyElement) => {
+                    console.log('[SCg] updateContent called with:', keyElement?.value);
+                    // Пытаемся использовать searcher из SCgNeighborhoodSearch
+                    const search = this.editors.scg?.search;
+                    if (search?.searcher) {
+                        try {
+                            const keyElements = keyElement ? [keyElement] : null;
+                            await search.searcher.searchContent(keyElements);
+                            console.log('[SCg] updateContent completed');
+                        } catch (error) {
+                            console.error('[SCg] updateContent error:', error);
+                        }
+                    } else {
+                        console.warn('[SCg] updateContent: searcher not available');
+                    }
                 },
-                postLayout: (scene) => {},
-                layout: (scene) => {},
             };
             
             const editor = new SCg.Editor();
@@ -229,14 +336,25 @@ class EditorManager {
             
             this.editors.scg.instance = editor;
             
-            // Initialize search integration
-            console.log('[EditorManager] Checking SCSearchIntegration:', typeof window.SCSearchIntegration);
-            if (window.SCSearchIntegration) {
-                console.log('[EditorManager] Calling SCSearchIntegration.init()');
-                window.SCSearchIntegration.init(editor);
-                console.log('[EditorManager] SCSearchIntegration.init() called');
+            // Initialize neighborhood search
+            console.log('[EditorManager] Initializing neighborhood search...');
+            if (window.SCgNeighborhoodSearch) {
+                console.log('[EditorManager] Creating SCgNeighborhoodSearch instance...');
+                const search = new window.SCgNeighborhoodSearch(editor, sandbox);
+                console.log('[EditorManager] Calling search.init()...');
+                search.init();
+                this.editors.scg.search = search;
+                console.log('[EditorManager] ✓ Neighborhood search ready');
             } else {
-                console.error('[EditorManager] SCSearchIntegration not found!');
+                console.warn('[EditorManager] SCgNeighborhoodSearch not found, will retry...');
+                setTimeout(() => {
+                    if (window.SCgNeighborhoodSearch) {
+                        const search = new window.SCgNeighborhoodSearch(editor, sandbox);
+                        search.init();
+                        this.editors.scg.search = search;
+                        console.log('[EditorManager] ✓ Neighborhood search ready (delayed)');
+                    }
+                }, 500);
             }
             
             this.editors.scg.getValue = () => {
@@ -256,12 +374,6 @@ class EditorManager {
                     editor.render.container.focus();
                 }
             };
-            
-            // Initialize search functionality
-            if (typeof SCgSearch !== 'undefined') {
-                SCgSearch.init(editor);
-                console.log('[EditorManager] SCg search initialized');
-            }
             
             this.initialized.scg = true;
             console.log('[EditorManager] SCg editor initialized');
