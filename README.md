@@ -85,21 +85,38 @@ pip install -e .
 cd ../..
 ```
 
-### Установка Node.js зависимостей и сборка SCg
+### Установка Node.js зависимостей
 
 ```bash
 # Установить Node.js зависимости проекта
 npm install
 
-# Установить зависимости sc-web и собрать SCg
+# Установить зависимости sc-web (для сборки)
 cd external/sc-web
 npm install
 npm run build
 cd ../..
 
-# Скопировать статические файлы SCg в проект
-npm run copy:scg
+# Скопировать HTML панели SCg в static/
+cp external/sc-web/client/static/components/html/*.html static/html/
+
+# Скопировать CSS стили SCg в static/css
+cp external/sc-web/components/scg/static/components/css/*.css static/css/
 ```
+
+### Структура подключения файлов
+
+- **JavaScript** - подключаются напрямую из `external/sc-web/`:
+  - Dependencies: `external/sc-web/client/static/common/`
+  - SCWeb Core: `external/sc-web/client/static/components/js/`
+  - SCWeb Core/Ui: `external/sc-web/client/js/Core/`, `external/sc-web/client/js/Ui/`
+  - SCg Editor: `external/sc-web/components/scg/src/`
+
+- **CSS** - копируются в `static/css/`:
+  - scg.css, bootstrap-override.css
+
+- **HTML** - копируются в `static/html/`:
+  - scg-tools-panel.html, scg-types-panel-*.html и др.
 
 ### Запуск без Docker
 
@@ -237,3 +254,22 @@ SC_SERVER_URL=ws://your-server:8090/ws_json python src/backend/app.py
 ## Лицензия
 
 MIT
+
+## История сборки
+
+После выполнения `npm run copy:scg` (или `npx grunt copy:scg`) в директории `static/` копируются:
+
+### Минимальные файлы для работы
+- `static/css/scg.css` - стили SCg
+- `static/css/bootstrap-override.css` - переопределение стилей Bootstrap
+- `static/css/common.css` - общие стили SCWeb
+- `static/js/scg/scg.js` - скомпилированный SCg Editor
+- `static/js/scs/scs.js` - скомпилированный SCS Editor
+- `static/html/scg-*.html` - HTML панелей SCg
+
+### Подключение напрямую из external/sc-web
+JavaScript модули SCWeb подключаются напрямую из исходников:
+- `external/sc-web/client/static/common/` - jQuery, Bootstrap, D3, Kinetic и др.
+- `external/sc-web/client/js/Core/` - Core модули SCWeb
+- `external/sc-web/client/js/Ui/` - UI модули SCWeb
+- `external/sc-web/components/scg/src/` - исходники SCg Editor
