@@ -100,9 +100,9 @@ class SCgNeighborhoodSearch {
             });
         };
 
-        // Создаем поисковик (DefaultSCgSearcher)
-        if (window.SCWeb.core.DefaultSCgSearcher) {
-            this.searcher = new window.SCWeb.core.DefaultSCgSearcher(this.sandbox);
+        // Создаем поисковик (LimitedDistanceBasedSCgSearcher - ограничение 3 уровня)
+        if (window.LimitedDistanceBasedSCgSearcher) {
+            this.searcher = new window.LimitedDistanceBasedSCgSearcher(this.sandbox, 3);
         }
 
         // Подписываемся на события изменения базы знаний
