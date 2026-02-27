@@ -95,7 +95,7 @@ class App {
         toolbarBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const mode = btn.dataset.mode;
-                if (mode === 'scs' || mode === 'scg') {
+                if (mode === 'scs' || mode === 'scweb') {
                     this.editorManager.switchTo(mode);
                 }
             });

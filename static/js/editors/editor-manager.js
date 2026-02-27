@@ -11,7 +11,7 @@ class EditorManager {
         this.editors = {};
         this.initialized = {
             scs: false,
-            scg: false
+            scweb: false
         };
         
         this.init();
@@ -29,7 +29,7 @@ class EditorManager {
         
         tabsContainer.innerHTML = `
             <button class="editor-type-tab active" data-type="scs">ScS</button>
-            <button class="editor-type-tab" data-type="scg">SCg</button>
+            <button class="editor-type-tab" data-type="scweb">SC-Web</button>
         `;
         
         this.container.appendChild(tabsContainer);
@@ -56,7 +56,7 @@ class EditorManager {
         this.contentContainer = contentContainer;
         
         this.createScSEditorContainer();
-        this.createScgEditorContainer();
+        this.createScWebEditorContainer();
     }
 
     createScSEditorContainer() {
@@ -127,63 +127,28 @@ class EditorManager {
         tryInit();
     }
 
-    createScgEditorContainer() {
-        const editorContainer = document.createElement('div');
-        editorContainer.className = 'scg-editor-wrapper';
-        editorContainer.style.display = 'none';
-        editorContainer.style.width = '100%';
-        editorContainer.style.height = '100%';
-        editorContainer.style.overflow = 'hidden';
+    createScWebEditorContainer() {
+        const container = document.createElement('div');
+        container.className = 'scweb-editor-wrapper';
+        container.style.display = 'none';
+        container.style.width = '100%';
+        container.style.height = '100%';
         
-        this.contentContainer.appendChild(editorContainer);
+        const iframe = document.createElement('iframe');
+        iframe.src = 'sc-web-iframe.html';
+        iframe.style.cssText = 'width:100%;height:100%;border:none;';
         
-        this.editors.scg = {
-            type: 'scg',
-            element: editorContainer,
-            instance: null,
+        container.appendChild(iframe);
+        this.contentContainer.appendChild(container);
+        
+        this.editors.scweb = {
+            type: 'scweb',
+            element: container,
+            instance: iframe,
             getValue: () => '',
             setValue: () => {},
-            focus: () => {},
+            focus: () => {}
         };
-        
-        this._initScgEditor(editorContainer);
-    }
-
-    _initScgEditor(container) {
-        const tryInit = () => {
-            if (typeof SCg !== 'undefined') {
-                // Wait for SCWeb to be ready
-                if (!window.scWebReady) {
-                    console.warn('[EditorManager] SCWeb not ready, waiting...');
-                    setTimeout(tryInit, 200);
-                    return;
-                }
-                
-                try {
-                    const editor = new SCgEditor(container);
-                    editor.init();
-                    
-                    this.editors.scg.instance = editor;
-                    this.editors.scg.getValue = () => editor.getValue();
-                    this.editors.scg.setValue = (value) => editor.setValue(value);
-                    this.editors.scg.focus = () => editor.focus();
-                    this.initialized.scg = true;
-                    console.log('[EditorManager] SCg editor initialized');
-                    
-                    if (this.options.onChange) {
-                        // SCg doesn't have onChange event, could add later
-                    }
-                } catch (error) {
-                    console.error('[EditorManager] Failed to init SCg:', error);
-                    setTimeout(tryInit, 100);
-                }
-            } else {
-                console.warn('[EditorManager] SCg not ready, waiting...');
-                setTimeout(tryInit, 100);
-            }
-        };
-        
-        tryInit();
     }
 
     switchTo(type) {
@@ -213,12 +178,6 @@ class EditorManager {
         const newEditor = this.getCurrentEditor();
         if (newEditor && newEditor.element) {
             newEditor.element.style.display = 'flex';
-            
-            // Trigger layout update for SCg
-            if (type === 'scg' && newEditor.instance) {
-                newEditor.instance.editor.render.update();
-                newEditor.instance.editor.scene.layout();
-            }
         }
         
         if (this.options.onSwitch) {
