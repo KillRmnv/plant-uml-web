@@ -3,206 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PlantUML Web - SCg Editor</title>
-    
-    <!-- CSS -->
+    <title>PlantUML Web - Login</title>
+
     <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/panels.css">
-    <link rel="stylesheet" href="css/editor.css">
-    <link rel="stylesheet" href="css/assistant.css">
-    <link rel="stylesheet" href="css/settings.css">
-    
-
+    <link rel="stylesheet" href="css/auth.css">
 </head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-left">
-            <div class="logo">PlantUML Web</div>
-        </div>
-        <div class="header-right">
-            <button class="header-btn" id="btn-settings" title="Settings">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-            </button>
-        </div>
-    </header>
+<body class="auth-body">
+    <div class="auth-container">
+        <!-- Login Form -->
+        <div class="auth-card" id="login-card">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <h1 class="auth-title">PlantUML Web</h1>
+                <p class="auth-subtitle">Sign in to your account</p>
+            </div>
 
-    <!-- Main Content -->
-    <main class="main-container">
-        <!-- Editor Toolbar -->
-        <div class="editor-toolbar">
-            <button class="toolbar-btn" data-mode="scs" data-tooltip="ScS Editor">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="4 7 4 4 20 4 20 7"></polyline>
-                    <line x1="9" y1="20" x2="15" y2="20"></line>
-                    <line x1="12" y1="4" x2="12" y2="20"></line>
-                </svg>
-            </button>
-            <button class="toolbar-btn" data-mode="scweb" data-tooltip="SC-Web">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <line x1="12" y1="2" x2="12" y2="9"></line>
-                    <line x1="12" y1="15" x2="12" y2="22"></line>
-                </svg>
-            </button>
-            
-            <div style="flex: 1;"></div>
-            
-            <button class="toolbar-btn" id="btn-render" data-tooltip="Render">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
-            </button>
-            <button class="toolbar-btn" id="btn-save" data-tooltip="Save Session">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                    <polyline points="7 3 7 8 15 8"></polyline>
-                </svg>
-            </button>
-            <button class="toolbar-btn" id="btn-clear" data-tooltip="Clear">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-            </button>
-            
-            <div class="toolbar-separator"></div>
-            
-            <button class="toolbar-btn" id="btn-save-scs" data-tooltip="Save SCS">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-            </button>
-            <button class="toolbar-btn" id="btn-load-scs" data-tooltip="Load SCS">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-            </button>
-            <button class="toolbar-btn" id="btn-sync-scweb" data-tooltip="Sync from SC-Web">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <polyline points="1 20 1 14 7 14"></polyline>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                </svg>
-            </button>
+            <form class="auth-form" id="login-form">
+                <div class="form-group">
+                    <label class="form-label" for="login-username">Username</label>
+                    <input
+                        type="text"
+                        id="login-username"
+                        class="form-input"
+                        placeholder="Enter your username"
+                        required
+                        autocomplete="username"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="login-password">Password</label>
+                    <div class="password-wrapper">
+                        <input
+                            type="password"
+                            id="login-password"
+                            class="form-input"
+                            placeholder="Enter your password"
+                            required
+                            autocomplete="current-password"
+                        >
+                        <button type="button" class="password-toggle" title="Show password">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" id="remember-me" class="checkbox-input">
+                        <span class="checkbox-label">Remember me</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" id="login-submit">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-loading hidden">
+                        <span class="spinner"></span>
+                    </span>
+                </button>
+
+                <div class="auth-message hidden" id="login-message"></div>
+            </form>
+
+            <div class="auth-footer">
+                <p>Don't have an account?
+                    <a href="#" class="auth-link" id="show-register">Sign up</a>
+                </p>
+                <p class="auth-guest">
+                    Or <a href="#" id="guest-login">continue as guest</a>
+                </p>
+            </div>
         </div>
-        
-        <!-- Panel Container -->
-        <div class="panel-container" id="panel-container">
-            <!-- Panels will be created by JavaScript -->
+
+        <!-- Register Form -->
+        <div class="auth-card hidden" id="register-card">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <h1 class="auth-title">Create Account</h1>
+                <p class="auth-subtitle">Register a new account</p>
+            </div>
+
+            <form class="auth-form" id="register-form">
+                <div class="form-group">
+                    <label class="form-label" for="register-username">Username</label>
+                    <input
+                        type="text"
+                        id="register-username"
+                        class="form-input"
+                        placeholder="Choose a username"
+                        required
+                        autocomplete="username"
+                        minlength="3"
+                        maxlength="32"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="register-email">Email (optional)</label>
+                    <input
+                        type="email"
+                        id="register-email"
+                        class="form-input"
+                        placeholder="your@email.com"
+                        autocomplete="email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="register-password">Password</label>
+                    <div class="password-wrapper">
+                        <input
+                            type="password"
+                            id="register-password"
+                            class="form-input"
+                            placeholder="Choose a password"
+                            required
+                            autocomplete="new-password"
+                            minlength="6"
+                        >
+                        <button type="button" class="password-toggle" title="Show password">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="password-strength">
+                        <div class="strength-bar"></div>
+                        <span class="strength-text"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="register-confirm">Confirm Password</label>
+                    <div class="password-wrapper">
+                        <input
+                            type="password"
+                            id="register-confirm"
+                            class="form-input"
+                            placeholder="Confirm your password"
+                            required
+                            autocomplete="new-password"
+                        >
+                        <button type="button" class="password-toggle" title="Show password">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="form-hint" id="password-match-hint"></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" id="register-submit">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loading hidden">
+                        <span class="spinner"></span>
+                    </span>
+                </button>
+
+                <div class="auth-message hidden" id="register-message"></div>
+            </form>
+
+            <div class="auth-footer">
+                <p>Already have an account?
+                    <a href="#" class="auth-link" id="show-login">Sign in</a>
+                </p>
+            </div>
         </div>
-    </main>
 
-    <!-- Status Bar -->
-    <footer class="status-bar">
-        <div class="status-left">
-            <span class="status-item">
-                <span class="status-indicator connected"></span>
-                <span>Ready</span>
-            </span>
-            <span class="status-item" id="status-message"></span>
+        <!-- Loading State -->
+        <div class="auth-card hidden" id="loading-card">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <h1 class="auth-title">PlantUML Web</h1>
+            </div>
+            <div class="auth-loading">
+                <div class="spinner spinner-large"></div>
+                <p class="loading-text">Loading...</p>
+            </div>
         </div>
-        <div class="status-right">
-            <span class="status-item">v1.0.0</span>
-        </div>
-    </footer>
+    </div>
 
-    <!-- Modal Container -->
-    <div id="modal-container"></div>
-
-
-    <!-- Monaco Editor Loader -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
-    <script>
-        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' }});
-        require(['vs/editor/editor.main'], function() {
-            window.monacoLoaded = true;
-            document.dispatchEvent(new Event('monacoLoaded'));
-        });
-    </script>
-
-    <!-- JavaScript Dependencies -->
     <script src="js/config.js"></script>
     <script src="js/api/client.js"></script>
-    <script src="js/panels/resizable.js"></script>
-    <script src="js/panels/collapsible.js"></script>
-    <script src="js/panels/panel-system.js"></script>
-    
-    <!-- SCS Language for Monaco Editor -->
-    <script src="js/editors/scs-bundle/scs-language.js"></script>
-    
-    <!-- Wait for Monaco to load, then initialize -->
-    <script>
-        function initScsEditor() {
-            if (typeof monaco === 'undefined') {
-                console.warn('[App] Monaco not ready, retrying...');
-                setTimeout(initScsEditor, 100);
-                return;
-            }
-            
-            // Define ScsEditor class for Monaco (compatible with editor-manager.js)
-            window.ScsEditor = function ScsEditor(container, value, theme) {
-                this._container = container;
-                this.editor = monaco.editor.create(container, {
-                    language: 'scs',
-                    theme: theme || 'scs',
-                    automaticLayout: true,
-                });
-                
-                if (value) {
-                    this.content = value;
-                }
-            };
-            
-            window.ScsEditor.prototype.getValue = function() {
-                return this.editor.getValue();
-            };
-            
-            window.ScsEditor.prototype.setValue = function(newValue) {
-                this.editor.setValue(newValue);
-            };
-            
-            Object.defineProperty(window.ScsEditor.prototype, 'content', {
-                get: function() { return this.editor.getValue(); },
-                set: function(v) { this.editor.setValue(v); }
-            });
-            
-            window.ScsEditor.prototype.focus = function() {
-                this.editor.focus();
-            };
-            
-            console.log('[App] ScsEditor class defined');
-        }
-        
-        // Initialize when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initScsEditor);
-        } else {
-            initScsEditor();
-        }
-        
-        // Also try after monacoLoaded event
-        window.addEventListener('monacoLoaded', initScsEditor);
-    </script>
-    
-    <script src="js/editors/editor-manager.js"></script>
-    <script src="js/render/strategy.js"></script>
-    <script src="js/render/scs-render.js"></script>
-    <script src="js/render/scg-render.js"></script>
-    <script src="js/render/factory.js"></script>
-    <script src="js/assistant/chat-list.js"></script>
-    <script src="js/assistant/chat-window.js"></script>
-    <script src="js/assistant/panel.js"></script>
-    <script src="js/settings/modal.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/auth/auth-manager.js"></script>
+    <script src="js/auth/auth-page.js"></script>
 </body>
 </html>
