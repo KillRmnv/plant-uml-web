@@ -18,30 +18,8 @@ class EditorManager {
     }
 
     init() {
-        this.renderTabs();
         this.createEditors();
         this.switchTo(this.currentEditor);
-    }
-
-    renderTabs() {
-        const tabsContainer = document.createElement('div');
-        tabsContainer.className = 'editor-type-tabs';
-        
-        tabsContainer.innerHTML = `
-            <button class="editor-type-tab active" data-type="scs">ScS</button>
-            <button class="editor-type-tab" data-type="scweb">SC-Web</button>
-        `;
-        
-        this.container.appendChild(tabsContainer);
-        
-        tabsContainer.addEventListener('click', (e) => {
-            const tab = e.target.closest('.editor-type-tab');
-            if (tab) {
-                this.switchTo(tab.dataset.type);
-            }
-        });
-        
-        this.tabsContainer = tabsContainer;
     }
 
     createEditors() {
@@ -162,16 +140,6 @@ class EditorManager {
         if (current && current.element) {
             current.element.style.display = 'none';
         }
-        
-        // Update tab state
-        const tabs = this.tabsContainer.querySelectorAll('.editor-type-tab');
-        tabs.forEach(tab => {
-            if (tab.dataset.type === type) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
         
         // Show new editor
         this.currentEditor = type;
