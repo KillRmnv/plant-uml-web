@@ -40,6 +40,36 @@ class Resizable {
         this.handle.style.opacity = '';
     }
 
+    findWrapper() {
+        const container = this.leftPanel.closest('.panel-container') || document.querySelector('.panel-container');
+        if (!container) return null;
+        return container.querySelector('.scweb-editor-wrapper');
+    }
+
+    addOverlay() {
+        const wrapper = this.findWrapper();
+        if (!wrapper) return;
+        
+        let overlay = wrapper.querySelector('.resize-block-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'resize-block-overlay';
+            overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:99999;background:transparent;cursor:default;';
+            wrapper.appendChild(overlay);
+        }
+        overlay.style.display = 'block';
+    }
+
+    removeOverlay() {
+        const wrapper = this.findWrapper();
+        if (!wrapper) return;
+        
+        const overlay = wrapper.querySelector('.resize-block-overlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    }
+
     onMouseDown(e) {
         if (e.button !== 0 || this.isDisabled) return;
         
@@ -54,7 +84,8 @@ class Resizable {
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
         
-        // ФИКСАЦИЯ: Переключаем панели в режим фиксированной ширины
+        this.addOverlay();
+        
         this.leftPanel.style.flex = '0 0 auto';
         this.rightPanel.style.flex = '0 0 auto';
     }
@@ -67,7 +98,6 @@ class Resizable {
         let newLeftWidth = this.startLeftWidth + deltaX;
         let newRightWidth = this.startRightWidth - deltaX;
         
-        // Ограничения минимальной ширины
         if (newLeftWidth < this.options.minWidth) {
             newLeftWidth = this.options.minWidth;
             newRightWidth = this.startLeftWidth + this.startRightWidth - this.options.minWidth;
@@ -78,7 +108,6 @@ class Resizable {
             newLeftWidth = this.startLeftWidth + this.startRightWidth - this.options.minWidth;
         }
         
-        // Применяем ширину напрямую
         this.leftPanel.style.width = newLeftWidth + 'px';
         this.rightPanel.style.width = newRightWidth + 'px';
     }
@@ -91,13 +120,10 @@ class Resizable {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         
-        // === ГЛАВНОЕ ИСПРАВЛЕНИЕ ===
-        // НЕ сбрасываем flex в ''! Оставляем '0 0 auto', чтобы width в пикселях работал.
-        // Панели вернутся в flex: 1 1 0 только при вызове adjustPanelSizes() 
-        // (при сворачивании другой панели или ресайзе окна)
+        this.removeOverlay();
+        
         this.leftPanel.style.flex = '0 0 auto';
         this.rightPanel.style.flex = '0 0 auto';
-        // ===========================
         
         this.options.onResizeEnd();
     }

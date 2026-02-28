@@ -101,9 +101,6 @@ class PanelSystem {
                     this.isResizing = false;
                     this.unlockAllCollapsible();
                     this.saveState();
-                    // После ручного изменения размера мы НЕ вызываем adjustPanelSizes,
-                    // чтобы сохранить выбор пользователя. Но мы должны разрешить 
-                    // будущим событиям сворачивания перезаписать это.
                 }
             });
             
