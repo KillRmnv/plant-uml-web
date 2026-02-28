@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+    </style>
+    <script>
+        function getGwfContent() {
+            try {
+                const iframe = document.querySelector('iframe');
+                if (!iframe || !iframe.contentWindow) return null;
+                
+                const win = iframe.contentWindow;
+                
+                if (win.GwfFileCreate && win.SCgComponent) {
+                    const scene = win.SCgComponent.scene;
+                    if (scene) {
+                        return win.GwfFileCreate.createFile(scene);
+                    }
+                }
+                
+                if (win.SCg && win.SCg.scg_list) {
+                    const scene = win.SCg.scg_list[0];
+                    if (scene && scene.scene) {
+                        return win.GwfFileCreate.createFile(scene.scene);
+                    }
+                }
+                
+                console.log('[sc-web-iframe] GwfFileCreate:', !!win.GwfFileCreate);
+                console.log('[sc-web-iframe] SCgComponent:', !!win.SCgComponent);
+                
+                return null;
+            } catch (err) {
+                console.error('[sc-web-iframe] Error getting GWF:', err);
+                return null;
+            }
+        }
+    </script>
+</head>
+<body>
+    <iframe src="http://localhost:8888"></iframe>
+</body>
+</html>

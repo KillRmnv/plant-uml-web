@@ -6,33 +6,6 @@ SCg Editor для визуализации и редактирования гр�
 
 Проект представляет собой веб-интерфейс для редактирования графовых конструкций с использованием SCg (Semantic Code Graph) редактора из OSTIS Web Platform.
 
-## Архитектура
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend (Browser)                        │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │  SCg Editor (из external/sc-web)                     │  │
-│  │  + jQuery, D3.js                                    │  │
-│  └───────────────────────┬───────────────────────────────┘  │
-│                          │ HTTP/WebSocket                   │
-└──────────────────────────│──────────────────────────────────┘
-                           │
-┌──────────────────────────│──────────────────────────────────┐
-│                    Backend (Flask)                           │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  py-sc-client + py-sc-kpm                            │  │
-│  │  (WebSocket к sc-machine)                            │  │
-│  └───────────────────────┬───────────────────────────────┘  │
-└──────────────────────────│──────────────────────────────────┘
-                           │
-                           ▼
-                 ┌─────────────────────┐
-                 │    sc-machine      │
-                 │  (OSTIS Core)      │
-                 └─────────────────────┘
-```
-
 ## Зависимости
 
 ### Git Submodules (в external/)
@@ -91,18 +64,27 @@ cd ../..
 # Установить Node.js зависимости проекта
 npm install
 
+<<<<<<< HEAD
 # Установить зависимости sc-web (для сборки)
+=======
+# Установить зависимости sc-web
+>>>>>>> frontend_v3.0
 cd external/sc-web
 npm install
 npm run build
+
 cd ../..
 
+<<<<<<< HEAD
 # Скопировать HTML панели SCg в static/
 cp external/sc-web/client/static/components/html/*.html static/html/
 
 # Скопировать CSS стили SCg в static/css
 cp external/sc-web/components/scg/static/components/css/*.css static/css/
 ```
+=======
+
+>>>>>>> frontend_v3.0
 
 ### Структура подключения файлов
 
@@ -134,114 +116,6 @@ python -m http.server 3000
 
 Открыть в браузере: http://localhost:3000
 
-### Запуск с Docker
-
-```bash
-# Сборка и запуск
-docker-compose up --build
-```
-
-## Структура проекта
-
-```
-plant-uml-web/
-├── external/                    # Git submodules
-│   ├── sc-web/                # SCg Editor
-│   ├── py-sc-client/          # Python клиент
-│   └── py-sc-kpm/             # KPM
-├── src/
-│   ├── backend/
-│   │   └── app.py             # Flask приложение
-│   └── frontend/
-│       └── index.html         # Главная страница
-├── static/                    # Статические файлы
-│   ├── components/            # SCg (после сборки)
-│   ├── scg-init.js           # Инициализация редактора
-│   └── css/                  # Стили проекта
-├── .venv/                     # Python виртуальное окружение
-├── package.json               # Node.js зависимости
-├── requirements.txt           # Python зависимости
-├── Gruntfile.js              # Сборка SCg
-├── docker-compose.yml        # Docker оркестрация
-└── Dockerfile                # Сборка образа
-```
-
-## Переменные окружения
-
-| Переменная | Описание | По умолчанию |
-|-----------|----------|--------------|
-| `SC_SERVER_URL` | URL sc-machine WebSocket | `ws://localhost:8090/ws_json` |
-| `DEBUG` | Режим отладки Flask | `True` |
-
-## API Endpoints
-
-### Управление графом
-
-| Метод | URL | Описание |
-|-------|-----|----------|
-| POST | `/api/node/create` | Создание узла |
-| POST | `/api/edge/create` | Создание дуги |
-| POST | `/api/link/create` | Создание sc-link |
-
-### Поиск и резолвинг
-
-| Метод | URL | Описание |
-|-------|-----|----------|
-| POST | `/api/keynodes/resolve` | Резолвинг идентификаторов |
-| POST | `/api/template/search` | Поиск по шаблону |
-
-### KPM (Knowledge Processing Module)
-
-| Метод | URL | Описание |
-|-------|-----|----------|
-| POST | `/api/kpm/search_similar` | Поиск похожих конструкций |
-| POST | `/api/kpm/generate_scs` | Генерация SCs кода |
-
-### Системные
-
-| Метод | URL | Описание |
-|-------|-----|----------|
-| GET | `/api/health` | Проверка здоровья |
-
-## Обновление зависимостей
-
-### Обновление submodules
-
-```bash
-# Обновить до последних версий
-git submodule update --remote
-
-# Закоммитить изменения
-git add external/
-git commit -m "Update submodules"
-
-# Пересобрать SCg
-npm run copy:scg
-```
-
-## Устранение проблем
-
-### Ошибка: Module not found
-
-```bash
-# Убедитесь что .venv активирован
-source .venv/bin/activate
-
-# Переустановите зависимости
-pip install -r requirements.txt
-```
-
-### Ошибка: SCg не загружается
-
-```bash
-# Проверьте что SCg собран
-ls static/components/js/scg/scg.js
-
-# Если файла нет - пересобрать
-cd external/sc-web && npm run build
-npm run copy:scg
-```
-
 ### Ошибка подключения к sc-machine
 
 ```bash
@@ -251,6 +125,7 @@ npm run copy:scg
 # Изменить URL можно через переменную окружения
 SC_SERVER_URL=ws://your-server:8090/ws_json python src/backend/app.py
 ```
+<<<<<<< HEAD
 ## Лицензия
 
 MIT
@@ -273,3 +148,5 @@ JavaScript модули SCWeb подключаются напрямую из и�
 - `external/sc-web/client/js/Core/` - Core модули SCWeb
 - `external/sc-web/client/js/Ui/` - UI модули SCWeb
 - `external/sc-web/components/scg/src/` - исходники SCg Editor
+=======
+>>>>>>> frontend_v3.0

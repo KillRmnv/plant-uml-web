@@ -8,6 +8,7 @@ class ChatWindow {
         this.options = options;
         this.isTyping = false;
         this.isFirstMessage = true;
+        this.currentMode = localStorage.getItem('assistantMode') || 'assistant';
         this.init();
     }
 
@@ -16,6 +17,9 @@ class ChatWindow {
     }
 
     render(title = 'Chat') {
+        const assistantActive = this.currentMode === 'assistant' ? 'active' : '';
+        const analystActive = this.currentMode === 'analyst' ? 'active' : '';
+        
         this.container.innerHTML = `
             <div class="chat-window">
                 <div class="chat-header">
@@ -44,6 +48,10 @@ class ChatWindow {
                             placeholder="Type a message..." 
                             rows="1"
                         ></textarea>
+                        <div class="mode-toggle">
+                            <button class="mode-btn ${assistantActive}" data-mode="assistant">Помощник</button>
+                            <button class="mode-btn ${analystActive}" data-mode="analyst">Аналитик</button>
+                        </div>
                         <button class="chat-send-btn" disabled>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -62,12 +70,20 @@ class ChatWindow {
         const input = this.container.querySelector('.chat-input');
         const sendBtn = this.container.querySelector('.chat-send-btn');
         const backBtn = this.container.querySelector('.back-btn');
+        const modeBtns = this.container.querySelectorAll('.mode-btn');
         
         if (backBtn) {
             backBtn.addEventListener('click', () => {
                 this.options.onBack?.();
             });
         }
+        
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                this.setMode(mode);
+            });
+        });
         
         input.addEventListener('input', () => {
             this.autoResize(input);
@@ -93,6 +109,20 @@ class ChatWindow {
         this.input = input;
         this.sendBtn = sendBtn;
     }
+    
+    setMode(mode) {
+        this.currentMode = mode;
+        localStorage.setItem('assistantMode', mode);
+        
+        const modeBtns = this.container.querySelectorAll('.mode-btn');
+        modeBtns.forEach(btn => {
+            if (btn.dataset.mode === mode) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
 
     autoResize(textarea) {
         textarea.style.height = 'auto';
@@ -111,7 +141,7 @@ class ChatWindow {
         this.autoResize(this.input);
         this.sendBtn.disabled = true;
         
-        this.options.onMessage?.(content, isFirst);
+        this.options.onMessage?.(content, isFirst, this.currentMode);
         
         this.showTyping();
     }

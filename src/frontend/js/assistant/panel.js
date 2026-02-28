@@ -21,7 +21,7 @@ class AssistantPanel {
         });
         
         this.chatWindow = new ChatWindow(this.chatWindowContainer, {
-            onMessage: (content, isFirst) => this.onMessage(content, isFirst),
+            onMessage: (content, isFirst, mode) => this.onMessage(content, isFirst, mode),
             onBack: () => this.showChatList(),
         });
         
@@ -77,7 +77,7 @@ class AssistantPanel {
         }
     }
 
-    onMessage(content, isFirst) {
+    onMessage(content, isFirst, mode = 'assistant') {
         const chatId = this.chatList.currentChatId;
         if (!chatId) return;
         
@@ -89,9 +89,11 @@ class AssistantPanel {
         
         this.chatList.addMessage(chatId, message, isFirst);
         
+        console.log('[AssistantPanel] Message sent - mode:', mode);
+        
         const assistantMessage = {
             role: 'assistant',
-            content: 'AI response will appear here when backend is connected.',
+            content: `AI response (mode: ${mode}) will appear here when backend is connected.`,
             timestamp: new Date().toISOString(),
         };
         
