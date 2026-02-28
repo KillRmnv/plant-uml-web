@@ -11,6 +11,11 @@ EMBED_CSS = """<style>
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Переопределить метод, чтобы всегда возвращал SCg
+    SCWeb.core.Main.getDefaultExternalLang = function() {
+        return "69475";
+    };
+    
     // 1. Включить экспертный режим
     var checkbox = document.getElementById('mode-switching-checkbox');
     if (checkbox) {
