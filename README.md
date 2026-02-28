@@ -124,29 +124,8 @@ python -m http.server 3000
 
 # Изменить URL можно через переменную окружения
 SC_SERVER_URL=ws://your-server:8090/ws_json python src/backend/app.py
-```
-<<<<<<< HEAD
+
 ## Лицензия
 
 MIT
 
-## История сборки
-
-После выполнения `npm run copy:scg` (или `npx grunt copy:scg`) в директории `static/` копируются:
-
-### Минимальные файлы для работы
-- `static/css/scg.css` - стили SCg
-- `static/css/bootstrap-override.css` - переопределение стилей Bootstrap
-- `static/css/common.css` - общие стили SCWeb
-- `static/js/scg/scg.js` - скомпилированный SCg Editor
-- `static/js/scs/scs.js` - скомпилированный SCS Editor
-- `static/html/scg-*.html` - HTML панелей SCg
-
-### Подключение напрямую из external/sc-web
-JavaScript модули SCWeb подключаются напрямую из исходников:
-- `external/sc-web/client/static/common/` - jQuery, Bootstrap, D3, Kinetic и др.
-- `external/sc-web/client/js/Core/` - Core модули SCWeb
-- `external/sc-web/client/js/Ui/` - UI модули SCWeb
-- `external/sc-web/components/scg/src/` - исходники SCg Editor
-=======
->>>>>>> frontend_v3.0

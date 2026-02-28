@@ -1,11 +1,10 @@
 {
-  "name": "my-project",
+  "name": "plant-uml-web",
   "version": "1.0.0",
-  "description": "SCg Editor integration with py-sc-client and py-sc-kpm",
+  "description": "Plant UML Editor with py-sc-client, py-sc-kpm,sc-web,js-scs-editor",
   "main": "src/backend/app.py",
   "scripts": {
     "build:scg": "cd external/sc-web && npm install && npm run build",
-    "copy:scg": "grunt copy:scg",
     "start:dev": "python -m http.server 3000 --directory src/frontend",
     "start:proxy": "PYTHONPATH=. python server/proxy_server.py",
     "start:backend": "python src/backend/app.py",
