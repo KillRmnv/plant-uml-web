@@ -6,7 +6,8 @@
   "scripts": {
     "build:scg": "cd external/sc-web && npm install && npm run build",
     "copy:scg": "grunt copy:scg",
-    "start:dev": "python -m http.server 3000",
+    "start:dev": "python -m http.server 3000 --directory src/frontend",
+    "start:proxy": "PYTHONPATH=. python server/proxy_server.py",
     "start:backend": "python src/backend/app.py",
     "install:all": "npm install && cd external/sc-web && npm install"
   },

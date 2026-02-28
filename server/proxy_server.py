@@ -2,7 +2,7 @@
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import urllib.request
 
-from cache import Cache
+from server.cache import Cache
 
 
 EMBED_CSS = """<style>
