@@ -5,10 +5,33 @@ import urllib.request
 
 EMBED_CSS = """<style>
 #static-window-container, #history-container, #footer, 
-.navbar-fixed-bottom { display: none !important; }
+.navbar-fixed-bottom, .mode-switching-panel, .navbar-default { display: none !important; }
 #window-container { width: 100% !important; }
 #main-container { left: 0 !important; width: 100% !important; }
-</style>"""
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Включить экспертный режим
+    var checkbox = document.getElementById('mode-switching-checkbox');
+    if (checkbox) {
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change'));
+    }
+    
+    // 2. Подождать загрузки языков и выбрать SCg
+    function selectSCg() {
+        var scgItem = document.querySelector('#history-item-langs li a[sc_addr="69475"]');
+        if (scgItem) {
+            scgItem.click();
+            console.log('[Proxy] SCg mode activated');
+        } else {
+            setTimeout(selectSCg, 500);
+        }
+    }
+    
+    setTimeout(selectSCg, 2000);
+});
+</script>"""
 
 
 def inject_css(html_content):
