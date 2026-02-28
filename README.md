@@ -70,9 +70,15 @@ git submodule update --init --recursive
 ```bash
 #Linux/macOS
 npm run install:all-linux
+ # or
+ npm run build:sc-web
+ npm run build:backend-linux
 
 #Windows 
 npm run install:all-win
+# or
+npm run build:sc-web
+npm run build:backend-win
 
 ```
 ### 2. Установка Python зависимостей
@@ -111,12 +117,13 @@ cd ../..
 
 Откройте **четыре терминала**:
 ```bash 
+    #work
     npm run start:frontend
-    
+    #work
     npm run start:proxy
-    
+    #backend implemented
     npm run start:backend
-    
+    #work
     npm run start:sc-web
 ```
 #### Вариант B: Покомпонентный запуск (рекомендуется для разработки)
@@ -145,10 +152,8 @@ python external/sc-web/server/app.py
 #### Вариант B: Docker
 
 ```bash
-# Сборка образа
 docker build -t plant-uml-web .
 
-# Запуск контейнера
 docker run -p 3000:3000 -p 8888:8888 -p 5000:5000 \
   -e SC_SERVER_URL=ws://host.docker.internal:8090/ws_json \
   plant-uml-web
