@@ -175,6 +175,13 @@ html, body {
     opacity: 1;
 }
 
+.toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+    margin: 0 4px;
+}
+
 /* ==========================================================================
    Panel System
    ========================================================================== */

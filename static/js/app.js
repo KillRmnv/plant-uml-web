@@ -91,6 +91,18 @@ class App {
             this.clearSession();
         });
         
+        document.getElementById('btn-save-scs').addEventListener('click', () => {
+            this.saveScsToFile();
+        });
+        
+        document.getElementById('btn-load-scs').addEventListener('click', () => {
+            this.loadScsFromFile();
+        });
+        
+        document.getElementById('btn-sync-scweb').addEventListener('click', () => {
+            this.syncFromScWeb();
+        });
+        
         const toolbarBtns = document.querySelectorAll('.toolbar-btn[data-mode]');
         toolbarBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -245,6 +257,66 @@ class App {
         }
     }
 
+    saveScsToFile() {
+        const content = this.editorManager.getValue();
+        if (!content) {
+            this.showStatus('Nothing to save', 'warning');
+            return;
+        }
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'graph.scs';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        this.showStatus('SCS saved to file', 'success');
+    }
+    
+    loadScsFromFile() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.scs';
+        
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target.result;
+                this.editorManager.setValue(content);
+                this.showStatus('SCS loaded from file', 'success');
+            };
+            reader.readAsText(file);
+        });
+        
+        input.click();
+    }
+    
+    syncFromScWeb() {
+        const iframe = document.querySelector('.scweb-editor-wrapper iframe');
+        if (!iframe || !iframe.contentWindow) {
+            this.showStatus('SC-Web not loaded', 'error');
+            return;
+        }
+        
+        try {
+            const gwfContent = iframe.contentWindow.getGwfContent();
+            if (!gwfContent) {
+                this.showStatus('Failed to get graph from SC-Web', 'error');
+                return;
+            }
+            
+            this.showStatus('Synced from SC-Web (GWF received)', 'success');
+            console.log('[App] GWF content:', gwfContent.substring(0, 200) + '...');
+        } catch (err) {
+            this.showStatus('Error syncing: ' + err.message, 'error');
+        }
+    }
+    
     showStatus(message, type = 'info') {
         const statusElement = document.getElementById('status-message');
         if (statusElement) {
