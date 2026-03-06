@@ -14,7 +14,7 @@ build/
 node_modules/
 npm-debug.log
 yarn-error.log
-
+*/logs/
 # IDE
 .idea/
 .vscode/
