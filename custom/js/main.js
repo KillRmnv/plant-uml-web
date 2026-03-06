@@ -1,45 +1,13 @@
-const scHelper = null;
-const scKeynodes = null;
-const currentYear = new Date().getFullYear();
+// Глобальные переменные (объявлены в sc-web-core.js)
+// const scHelper = null;
+// const scKeynodes = null;
+// const currentYear = new Date().getFullYear();
 
-const SCgEditMode = {
-  SCgModeSelect: 0,
-  SCgModeConnector: 1,
-  SCgModeBus: 2,
-  SCgModeContour: 3,
-  SCgModeLink: 4,
-  SCgViewOnly: 5,
-
-  /**
-   * Check if specified mode is valid
-   */
-  isValid: function (mode) {
-    return mode >= this.SCgModeSelect && mode <= this.SCgViewOnly;
-  },
-};
-
-const SCgViewMode = {
-  DefaultSCgView: 0,
-  DistanceBasedSCgView: 1,
-
-  /**
-   * Check if specified mode is valid
-   */
-  isValid: function (mode) {
-    return mode >= this.DefaultSCgView && mode <= this.DistanceBasedSCgView;
-  },
-};
-
-// backward compatibility [scg_just_view <- scg_view_only]
-const editModes = {
-  scg_just_view: SCgEditMode.SCgViewOnly,
-  scg_view_only: SCgEditMode.SCgViewOnly,
-};
-
-const viewModes = {
-  default_scg_view: SCgViewMode.DefaultSCgView,
-  distance_based_scg_view: SCgViewMode.DistanceBasedSCgView,
-};
+// SCgEditMode и SCgViewMode объявлены в sc-web-core.js, используем их
+// const SCgEditMode = { ... };
+// const SCgViewMode = { ... };
+// const editModes = { ... };
+// const viewModes = { ... };
 
 function ScClientCreate() {
   let res, rej;
@@ -72,11 +40,73 @@ if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.Core) {
         SCWeb.ui.Core.resolveElementsAddr("body"),
       ]).then(function () {
         $("#search-panel").removeClass("no_display");
-        console.log("[Minimal] UI инициализирован");
+
+        // Включаем экспертный режим по умолчанию
+        SCWeb.core.ExpertModeEnabled = true;
+        SCWeb.core.EventManager.emit("expert_mode_changed");
+
+        // Устанавливаем SCg режим по умолчанию
+        SCWeb.core.Main.editMode = SCgEditMode.SCgModeSelect;
+        SCWeb.core.Main.editMode;
+        SCWeb.core.Main.viewMode = SCgViewMode.DefaultSCgView;
+
+        console.log(
+          "[Minimal] UI инициализирован (Expert Mode: ON, Editor: SCg)",
+        );
         resolve();
       });
     });
   };
+}
+
+// Переопределение WindowManager.init() — ext_langs уже в правильном порядке
+if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.WindowManager) {
+  var originalWMInit = SCWeb.ui.WindowManager.init;
+  SCWeb.ui.WindowManager.init = function (params) {
+    return originalWMInit.call(this, params).then(
+      function () {
+        console.log("[Minimal] WindowManager.init() вызван");
+        console.log(
+          "[Minimal] ext_langs:",
+          JSON.parse(JSON.stringify(this.ext_langs)),
+        );
+
+        // ext_langs уже содержит адреса форматов в правильном порядке
+        // SCg (69475) первый, SCn (185596) второй
+        if (this.ext_langs && this.ext_langs.length >= 2) {
+          console.log("[Minimal] Первый элемент (SCg):", this.ext_langs[0]);
+          console.log("[Minimal] Второй элемент (SCn):", this.ext_langs[1]);
+        }
+      }.bind(this),
+    );
+  };
+  console.log("[Minimal] WindowManager.init() переопределён");
+}
+
+// Переопределение getDefaultExternalLang для возврата первого формата (SCg)
+if (typeof SCWeb !== "undefined" && SCWeb.core && SCWeb.core.Main) {
+  SCWeb.core.Main.getDefaultExternalLang = function () {
+    console.log("[Minimal] getDefaultExternalLang вызван");
+
+    // Возвращаем первый формат из ext_langs (SCg = 69475)
+    if (
+      SCWeb.ui.WindowManager &&
+      SCWeb.ui.WindowManager.ext_langs &&
+      SCWeb.ui.WindowManager.ext_langs.length > 0
+    ) {
+      var firstFormat = SCWeb.ui.WindowManager.ext_langs[0];
+      console.log(
+        "[Minimal] getDefaultExternalLang вернул первый формат:",
+        firstFormat,
+      );
+      return firstFormat;
+    }
+
+    // Fallback на оригинал
+    console.log("[Minimal] Fallback на user.default_ext_lang");
+    return this.user.default_ext_lang;
+  };
+  console.log("[Minimal] getDefaultExternalLang переопределён");
 }
 
 SCWeb.core.Main = {
@@ -133,18 +163,55 @@ SCWeb.core.Main = {
     this.user = data.user;
     data.menu_container_id = params.menu_container_id;
 
+    // ОТЛАДКА: Выводим URL параметры
+    console.log("[Minimal] URL searchObject:", url.searchObject);
+    console.log("[Minimal] edit_mode:", url.searchObject.edit_mode);
+    console.log("[Minimal] view_mode:", url.searchObject.view_mode);
+    console.log("[Minimal] sys_id:", url.searchObject.sys_id);
+    console.log("[Minimal] action:", url.searchObject.action);
+    console.log("[Minimal] lang:", url.searchObject.lang);
+
     SCWeb.core.Translation.fireLanguageChanged(this.user.current_lang);
 
     // Авто-открытие страницы отключено для минимальной версии
-    // if (!url.searchObject || !SCWeb.core.Main.pageShowedForUrlParameters(url.searchObject)) {
-    //   SCWeb.core.Main.showDefaultPage(params).then(null);
-    // }
+    // ВОЗВРАЩАЕМ showDefaultPage() для создания окна
+    if (
+      !url.searchObject ||
+      !SCWeb.core.Main.pageShowedForUrlParameters(url.searchObject)
+    ) {
+      console.log("[Minimal] Вызываем showDefaultPage для создания окна");
+      SCWeb.core.Main.showDefaultPage(params).then(null);
+    }
 
     await Promise.all([
       SCWeb.ui.Core.init(data),
       SCWeb.core.ComponentManager.init(),
       SCWeb.core.Translation.update(),
     ]);
+  },
+
+  showDefaultPage: async function (params) {
+    console.log("[Minimal] showDefaultPage вызван");
+
+    function start(a) {
+      console.log("[Minimal] start() с адресом:", a);
+      SCWeb.core.Main.doDefaultCommand([a]);
+      if (params.first_time) $("#help-modal").modal({ keyboard: true });
+    }
+
+    const argumentAddr = window.scKeynodes["ui_start_sc_element"];
+    console.log("[Minimal] argumentAddr:", argumentAddr);
+
+    let startScElements = await window.scHelper.getSetElements(argumentAddr);
+    console.log("[Minimal] startScElements:", startScElements);
+
+    if (startScElements.length) {
+      start(startScElements[0]);
+    } else {
+      start(argumentAddr);
+    }
+
+    $(".copyright").text(`Copyright © 2012 - ${currentYear} OSTIS`);
   },
 
   pageShowedForUrlParameters(urlObject) {
