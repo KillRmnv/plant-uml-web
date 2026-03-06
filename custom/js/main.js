@@ -1,53 +1,62 @@
-const scHelper = null;
-const scKeynodes = null;
-const currentYear = new Date().getFullYear();
+console.log("[Custom] ===== main.js НАЧАЛО ЗАГРУЗКИ =====");
+console.log("[Custom] SCWeb:", typeof SCWeb);
+console.log("[Custom] SCWeb.ui:", typeof SCWeb?.ui);
+console.log("[Custom] SCWeb.ui.WindowManager:", typeof SCWeb?.ui?.WindowManager);
+console.log("[Custom] SCWeb.core:", typeof SCWeb?.core);
+console.log("[Custom] SCWeb.core.Main:", typeof SCWeb?.core?.Main);
 
-const SCgEditMode = {
-  SCgModeSelect: 0,
-  SCgModeConnector: 1,
-  SCgModeBus: 2,
-  SCgModeContour: 3,
-  SCgModeLink: 4,
-  SCgViewOnly: 5,
+// Константы SCgEditMode, SCgViewMode, editModes, viewModes, ScClientCreate
+// уже объявлены в оригинальном sc-web/core/main.js
 
-  /**
-   * Check if specified mode is valid
-   */
-  isValid: function (mode) {
-    return mode >= this.SCgModeSelect && mode <= this.SCgViewOnly;
-  },
-};
+// Переопределение SCWeb.ui.WindowManager.appendHistoryItem
+// Добавляем логику выбора scg_code формата по умолчанию
+console.log("[Custom] Проверка условия для WindowManager.appendHistoryItem:");
+console.log("[Custom]   typeof SCWeb !== 'undefined':", typeof SCWeb !== "undefined");
+console.log("[Custom]   SCWeb.ui:", SCWeb?.ui);
+console.log("[Custom]   SCWeb.ui.WindowManager:", SCWeb?.ui?.WindowManager);
+console.log("[Custom]   SCWeb.ui.WindowManager.appendHistoryItem:", typeof SCWeb?.ui?.WindowManager?.appendHistoryItem);
 
-const SCgViewMode = {
-  DefaultSCgView: 0,
-  DistanceBasedSCgView: 1,
-
-  /**
-   * Check if specified mode is valid
-   */
-  isValid: function (mode) {
-    return mode >= this.DefaultSCgView && mode <= this.DistanceBasedSCgView;
-  },
-};
-
-// backward compatibility [scg_just_view <- scg_view_only]
-const editModes = {
-  scg_just_view: SCgEditMode.SCgViewOnly,
-  scg_view_only: SCgEditMode.SCgViewOnly,
-};
-
-const viewModes = {
-  default_scg_view: SCgViewMode.DefaultSCgView,
-  distance_based_scg_view: SCgViewMode.DistanceBasedSCgView,
-};
-
-function ScClientCreate() {
-  let res, rej;
-  let scClient = new sc.ScClient(serverHost);
-  return new Promise((resolve, reject) => {
-    res = resolve(scClient);
-    rej = reject;
-  });
+if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.WindowManager && SCWeb.ui.WindowManager.appendHistoryItem) {
+  console.log("[Custom] ===== ПЕРЕОПРЕДЕЛЯЕМ WindowManager.appendHistoryItem =====");
+  
+  // Сохраняем оригинальную функцию
+  var originalAppendHistoryItem = SCWeb.ui.WindowManager.appendHistoryItem;
+  console.log("[Custom] Оригинальная функция:", originalAppendHistoryItem);
+  
+  // Переопределяем
+  SCWeb.ui.WindowManager.appendHistoryItem = function(action_addr, command_state) {
+    console.log("[Custom WM] ===== МОЁ ПЕРЕОПРЕДЕЛЕНИЕ ВЫЗВАНО =====");
+    console.log("[Custom WM] appendHistoryItem вызван");
+    console.log("[Custom WM] action_addr:", action_addr);
+    console.log("[Custom WM] command_state до:", JSON.stringify(command_state));
+    console.log("[Custom WM] viewMode:", SCWeb.core.Main.viewMode);
+    console.log("[Custom WM] editMode:", SCWeb.core.Main.editMode);
+    
+    // Если формат не установлен, проверяем режим
+    if (!command_state.format) {
+      // Если установлен графический режим (viewMode=1 или editMode>0), используем scg_code
+      var useScgMode = SCWeb.core.Main.viewMode === 1 || SCWeb.core.Main.editMode > 0;
+      console.log("[Custom WM] useScgMode:", useScgMode);
+      
+      if (useScgMode) {
+        // Ищем scg_code формат среди фабрик
+        var factories = SCWeb.core.ComponentManager._factories_fmt;
+        console.log("[Custom WM] Поиск scg_code среди фабрик...");
+        for (var fmt in factories) {
+          console.log("[Custom WM] Формат:", fmt, "ext_lang:", factories[fmt].ext_lang);
+          if (factories[fmt].ext_lang === 'scg_code') {
+            command_state.format = fmt;
+            console.log("[Custom WM] Используем scg_code формат:", fmt);
+            break;
+          }
+        }
+      }
+    }
+    
+    console.log("[Custom WM] command_state после:", command_state);
+    // Вызываем оригинальную функцию
+    return originalAppendHistoryItem.call(this, action_addr, command_state);
+  };
 }
 
 // Переопределение SCWeb.ui.Core.init для минимальной версии
@@ -63,7 +72,7 @@ if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.Core) {
         // SCWeb.ui.ArgumentsPanel.init(),
         // SCWeb.ui.UserPanel.init(data),
         // SCWeb.ui.LanguagePanel.init(data),
-        // SCWeb.ui.ExpertModePanel.init(),
+        SCWeb.ui.ExpertModePanel.init(),
 
         // Оставлено:
         SCWeb.ui.WindowManager.init(data),
@@ -78,6 +87,8 @@ if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.Core) {
     });
   };
 }
+
+console.log("[Custom] ===== ПЕРЕОПРЕДЕЛЯЕМ SCWeb.core.Main =====");
 
 SCWeb.core.Main = {
   editMode: 0,
@@ -94,6 +105,8 @@ SCWeb.core.Main = {
    * - menu_container_id - id of dom element, that will contain menu items
    */
   init: function (params) {
+    console.log("[Custom Main] ===== init ВЫЗВАН =====");
+    console.log("[Custom Main] params:", params);
     return new Promise((resolve) => {
       const self = this;
       SCWeb.core.Server._initialize();
@@ -117,7 +130,11 @@ SCWeb.core.Main = {
   },
 
   parseUrl: async function (data, params) {
+    console.log("[Custom] ===== parseUrl ВЫЗВАН =====");
     const url = parseURL(window.location.href);
+
+    console.log("[Custom] URL:", window.location.href);
+    console.log("[Custom] url.searchObject:", url.searchObject);
 
     url.searchObject.view_mode =
       viewModes[url.searchObject.view_mode] ?? SCgViewMode.DefaultSCgView;
@@ -129,16 +146,36 @@ SCWeb.core.Main = {
     url.searchObject.edit_mode =
       editModes[url.searchObject.edit_mode] ?? SCgEditMode.SCgModeSelect;
 
+    console.log("[Custom] view_mode после:", url.searchObject.view_mode);
+    console.log("[Custom] edit_mode после:", url.searchObject.edit_mode);
+
     this.menu_commands = data.menu_commands;
     this.user = data.user;
     data.menu_container_id = params.menu_container_id;
 
+    // Устанавливаем режим по умолчанию в SCG (графический режим)
+    // если не указан в URL
+    console.log("[Custom] URL searchObject:", url.searchObject);
+    console.log("[Custom] view_mode из URL:", url.searchObject.view_mode);
+    console.log("[Custom] edit_mode из URL:", url.searchObject.edit_mode);
+    
+    if (!url.searchObject.view_mode && !url.searchObject.edit_mode) {
+      console.log("[Custom] Режим не указан в URL, устанавливаем SCG по умолчанию");
+      this.viewMode = 1; // DistanceBasedSCgView - графический режим
+      this.editMode = 1; // SCgModeConnector - режим редактирования
+    } else {
+      this.viewMode = url.searchObject.view_mode;
+      this.editMode = url.searchObject.edit_mode;
+    }
+    console.log("[Custom] viewMode установлен:", this.viewMode);
+    console.log("[Custom] editMode установлен:", this.editMode);
+
     SCWeb.core.Translation.fireLanguageChanged(this.user.current_lang);
 
-    // Авто-открытие страницы отключено для минимальной версии
-    // if (!url.searchObject || !SCWeb.core.Main.pageShowedForUrlParameters(url.searchObject)) {
-    //   SCWeb.core.Main.showDefaultPage(params).then(null);
-    // }
+    // Авто-открытие страницы включено
+    if (!url.searchObject || !SCWeb.core.Main.pageShowedForUrlParameters(url.searchObject)) {
+      SCWeb.core.Main.showDefaultPage(params).then(null);
+    }
 
     await Promise.all([
       SCWeb.ui.Core.init(data),
@@ -270,7 +307,12 @@ SCWeb.core.Main = {
   },
 
   showDefaultPage: async function (params) {
+    console.log("[Custom] ===== showDefaultPage ВЫЗВАН =====");
+    console.log("[Custom] viewMode перед showDefaultPage:", this.viewMode);
+    console.log("[Custom] editMode перед showDefaultPage:", this.editMode);
+    
     function start(a) {
+      console.log("[Custom] start() с адресом:", a);
       SCWeb.core.Main.doDefaultCommand([a]);
       if (params.first_time) $("#help-modal").modal({ keyboard: true });
     }
@@ -278,12 +320,12 @@ SCWeb.core.Main = {
     const argumentAddr = window.scKeynodes["ui_start_sc_element"];
     let startScElements = await window.scHelper.getSetElements(argumentAddr);
     if (startScElements.length) {
+      console.log("[Custom] Используем первый элемент:", startScElements[0]);
       start(startScElements[0]);
     } else {
+      console.log("[Custom] Используем argumentAddr:", argumentAddr);
       start(argumentAddr);
     }
-
-    $(".copyright").text(`Copyright © 2012 - ${currentYear} OSTIS`);
   },
 
   /**
@@ -299,10 +341,19 @@ SCWeb.core.Main = {
    * @param {Array} cmd_args Array of sc-addrs with command arguments
    */
   doCommand: function (cmd_addr, cmd_args) {
+    console.log("[Custom Main] ===== doCommand ВЫЗВАН =====");
+    console.log("[Custom Main] cmd_addr:", cmd_addr);
+    console.log("[Custom Main] cmd_args:", cmd_args);
+    console.log("[Custom Main] viewMode:", this.viewMode);
+    console.log("[Custom Main] editMode:", this.editMode);
+    
     SCWeb.core.Arguments.clear();
     SCWeb.core.Server.doCommand(cmd_addr, cmd_args, function (result) {
+      console.log("[Custom Main] doCommand result:", result);
       if (result.action !== undefined) {
         const commandState = new SCWeb.core.CommandState(cmd_addr, cmd_args);
+        console.log("[Custom Main] Создан commandState:", commandState);
+        console.log("[Custom Main] Вызываем appendHistoryItem...");
         SCWeb.ui.WindowManager.appendHistoryItem(result.action, commandState);
       } else if (result.command !== undefined) {
       } else {
@@ -387,17 +438,25 @@ SCWeb.core.Main = {
    * @param {Array} cmd_args Array of sc-addrs with command arguments
    */
   doDefaultCommand: function (cmd_args) {
+    console.log("[Custom Main] ===== doDefaultCommand ВЫЗВАН =====");
+    console.log("[Custom Main] cmd_args:", cmd_args);
+    console.log("[Custom Main] default_cmd:", this.default_cmd);
+    console.log("[Custom Main] viewMode:", this.viewMode);
+    console.log("[Custom Main] editMode:", this.editMode);
+    
     if (!this.default_cmd) {
       const self = this;
       SCWeb.core.Server.resolveScAddr([this.default_cmd_str]).then(
         function (addrs) {
           self.default_cmd = addrs[self.default_cmd_str];
+          console.log("[Custom Main] resolved default_cmd:", self.default_cmd);
           if (self.default_cmd) {
             self.doCommand(self.default_cmd, cmd_args);
           }
         },
       );
     } else {
+      console.log("[Custom Main] Используем кешированный default_cmd");
       this.doCommand(this.default_cmd, cmd_args);
     }
   },
@@ -457,3 +516,5 @@ SCWeb.core.Main = {
     }
   },
 };
+
+console.log("[Custom] ===== main.js ЗАВЕРШЕН =====");
