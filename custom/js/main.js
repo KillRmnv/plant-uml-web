@@ -34,8 +34,8 @@ if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.WindowManager && SCWeb.
     
     // Если формат не установлен, проверяем режим
     if (!command_state.format) {
-      // Если установлен графический режим (viewMode=1 или editMode>0), используем scg_code
-      var useScgMode = SCWeb.core.Main.viewMode === 1 || SCWeb.core.Main.editMode > 0;
+      // Всегда используем scg_code по умолчанию
+      var useScgMode = true;
       console.log("[Custom WM] useScgMode:", useScgMode);
       
       if (useScgMode) {
@@ -72,7 +72,7 @@ if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.Core) {
         // SCWeb.ui.ArgumentsPanel.init(),
         // SCWeb.ui.UserPanel.init(data),
         // SCWeb.ui.LanguagePanel.init(data),
-        SCWeb.ui.ExpertModePanel.init(),
+        // SCWeb.ui.ExpertModePanel.init(),
 
         // Оставлено:
         SCWeb.ui.WindowManager.init(data),
@@ -161,8 +161,8 @@ SCWeb.core.Main = {
     
     if (!url.searchObject.view_mode && !url.searchObject.edit_mode) {
       console.log("[Custom] Режим не указан в URL, устанавливаем SCG по умолчанию");
-      this.viewMode = 1; // DistanceBasedSCgView - графический режим
-      this.editMode = 1; // SCgModeConnector - режим редактирования
+      this.viewMode = 0; // DefaultSCgView
+      this.editMode = 0; // SCgModeSelect
     } else {
       this.viewMode = url.searchObject.view_mode;
       this.editMode = url.searchObject.edit_mode;
