@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import configparser
 import logging
 import os
@@ -7,13 +5,8 @@ import signal
 from abc import ABC
 from os.path import abspath, dirname, join
 
-import admin.main as admin
-import admin.users as admin_users
-import db
 import handlers.api as api
-import handlers.auth as auth
 import logger_sc
-import secret
 import tornado.ioloop
 import tornado.options
 import tornado.web
@@ -97,16 +90,6 @@ def parse_options():
     tornado.options.define("auth_redirect_port", default=80, help="host port", type=int)
 
     tornado.options.define(
-        "google_client_id", default="", help="client id for google auth", type=str
-    )
-    tornado.options.define(
-        "google_client_secret",
-        default="",
-        help="client secret for google auth",
-        type=str,
-    )
-
-    tornado.options.define(
         "apiai_subscription_key",
         default="",
         help="subscription key for api.ai",
@@ -117,22 +100,6 @@ def parse_options():
         default="",
         help="client access token for api.ai",
         type=str,
-    )
-
-    tornado.options.define(
-        "user_key_expire_time",
-        default=600,
-        help="user key expire time in seconds",
-        type=int,
-    )
-    tornado.options.define(
-        "super_emails",
-        default="",
-        help="email of site super administrator (maximum rights)",
-        type=list,
-    )
-    tornado.options.define(
-        "db_path", default="data.db", help="path to database file", type=str
     )
 
     tornado.options.define(
@@ -172,12 +139,6 @@ def init_app_rules():
         (r"/api/languages/set/", api.LanguageSet),
         (r"/api/info/tooltip/", api.InfoTooltip),
         (r"/api/user/", api.User),
-        (r"/auth/google$", auth.GoogleOAuth2LoginHandler),
-        (r"/auth/logout$", auth.LogOut),
-        (r"/admin$", admin.MainHandler),
-        (r"/admin/users/get$", admin_users.UsersInfo),
-        (r"/admin/users/set_rights$", admin_users.UserSetRights),
-        (r"/admin/users/list_rights$", admin_users.UserListRights),
     ]
 
 
@@ -224,11 +185,6 @@ class NoCacheStaticHandler(tornado.web.StaticFileHandler, ABC):
 def main(options):
     logging.getLogger("asyncio").setLevel(logging.WARNING)
 
-    # prepare database
-    logger.info("Preparing database...")
-    database = db.DataBase()
-    database.init()
-
     # prepare logger
     logger.info("Preparing logger...")
     logger_sc.init()
@@ -236,15 +192,10 @@ def main(options):
     rules = init_app_rules()
     application = tornado.web.Application(
         handlers=rules,
-        cookie_secret=secret.get_secret(),
-        login_url="/auth/google",
+        cookie_secret="dummy_secret_for_anonymous_sessions",
         template_path=tornado.options.options.templates_path,
         xsrf_cookies=False,
         gzip=True,
-        google_oauth={
-            "key": options.google_client_id,
-            "secret": options.google_client_secret,
-        },
         public_url=options.public_url,
     )
 
