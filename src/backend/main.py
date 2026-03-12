@@ -82,13 +82,13 @@ async def app_page():
         return f.read()
 
 
+# Static files - /static/ (must be before catch-all /)
+app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
+logger.info(f"Mounted static: {STATIC_PATH}")
+
 # Static files - / (serves frontend files, must be last)
 app.mount("/", StaticFiles(directory=FRONTEND_PATH), name="frontend")
 logger.info(f"Mounted frontend: {FRONTEND_PATH}")
-
-# Static files - /static/
-app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
-logger.info(f"Mounted static: {STATIC_PATH}")
 
 
 @app.get("/health")

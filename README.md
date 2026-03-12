@@ -72,7 +72,13 @@ npm run install:all-win
 
 ### 3. Запуск
 
-Для запуска требуется запущенная sc-machine по адресу `ws://localhost:8090/ws_json` либо указать через переменную окружения `SC_SERVER_HOST` и `SC_SERVER_PORT`.
+Для запуска требуется запущенная sc-machine по адресу `ws://localhost:8090/ws_json` либо указать через переменную окружения `SC_SERVER_HOST` и `SC_SERVER_PORT`.Также нужно задать переменную окружения `SC_WEB_ROOT`,которая содержала бы путь к корню sc-web(Пример: `~/University/plant-uml-web/external/sc-web/`).
+```bash
+export SC_WEB_ROOT=~/University/plant-uml-web/external/sc-web/
+```
+```fish
+set  SC_WEB_ROOT ~/University/plant-uml-web/external/sc-web/
+```
 
 ```bash
 npm run start:backend
