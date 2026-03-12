@@ -7,14 +7,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from jinja2 import Environment, FileSystemLoader
 
 from config import (
     HOST,
     PORT,
     STATIC_PATH,
-    TEMPLATES_PATH,
-    CUSTOM_JS_PATH,
     FRONTEND_PATH,
     PUBLIC_URL,
     REPO_FILE_PATH,
@@ -84,10 +81,6 @@ async def app_page():
     with open(os.path.join(FRONTEND_PATH, "app.html"), "r") as f:
         return f.read()
 
-
-# Custom JS - /custom/js/ (must be before catch-all /)
-app.mount("/custom/js", StaticFiles(directory=CUSTOM_JS_PATH), name="custom_js")
-logger.info(f"Mounted custom js: {CUSTOM_JS_PATH}")
 
 # Static files - / (serves frontend files, must be last)
 app.mount("/", StaticFiles(directory=FRONTEND_PATH), name="frontend")
