@@ -2,37 +2,34 @@
 
 Веб-интерфейс для редактирования и визуализации графов знаний с интеграцией OSTIS SC-machine.
 
-##  Описание
+## Описание
 
 Проект предоставляет редактор для работы с графовыми конструкциями в формате **ScS** (текстовый) и **SCg** (графический) с возможностью рендеринга в изображения и интеграцией с AI-ассистентом.
 
-### Ключевые возможности
+### Клювые возможности
 
--  **Два режима редактирования:**
+- **Два режима редактирования:**
   - **ScS** — текстовый редактор на базе Monaco Editor с подсветкой синтаксиса
-  - **SCg** — графический редактор через интеграцию с SC-Web
--  **Рендеринг графов** в PNG/SVG форматы
--  **AI Ассистент** с поддержкой чатов и режимами «Помощник»/«Аналитик»
--  **Автосохранение** сессий в LocalStorage
--  **Экспорт/импорт** ScS файлов
--  **Синхронизация** с SC-Web (GWF формат)
+  - **SCg** — графический редактор через интеграцию с SC-Web (iframe)
+- **Рендеринг графов** в PNG/SVG форматы
+- **AI Ассистент** с поддержкой чатов
+- **Автосохранение** сессий в LocalStorage
+- **Экспорт/импорт** ScS файлов
+- **Синхронизация** с SC-Web (GWF формат)
 
 ---
-
 
 ### Компоненты
 
 | Компонент | Порт | Описание |
 |-----------|------|----------|
-| **Frontend** | :3000 | Vanilla JS + Monaco Editor (CDN) |
-| **Backend API** | :5000 |  |
-| **Proxy Server** | :8888 | Прокси на SC-Web с кэшированием |
-| **SC-Web** | :8000 | OSTIS Web Platform (графический редактор) |
+| **Backend API** | :8000 | FastAPI + статика фронтенда |
+| **SC-Web (iframe)** | :8000 | Интегрирован в основное приложение |
 | **SC-Machine** | :8090 | Внешний sc-machine (требуется отдельно) |
 
 ---
 
-##  Зависимости
+## Зависимости
 
 ### Системные требования
 
@@ -49,165 +46,94 @@
 | `external/sc-web` | SCg Editor компонент (OSTIS Web Platform) |
 | `external/py-sc-client` | Python клиент для sc-machine |
 | `external/py-sc-kpm` | Knowledge Processing Module |
-| `external/scs-js-editor` | ScS editor |
-
 
 ---
 
-##  Установка и запуск
+## Установка и запуск
 
 ### 1. Клонирование репозитория
 
 ```bash
-# Клонирование с инициализацией submodules
 git clone https://github.com/KillRmnv/plant-uml-web.git
 cd plant-uml-web
 
 git submodule update --init --recursive
 ```
-### Быстрая установка с npm:
+
+### 2. Быстрая установка
 
 ```bash
-#Linux/macOS
+# Linux/macOS
 npm run install:all-linux
- # or
- npm run build:sc-web
- npm run build:backend-linux
 
-#Windows 
+# Windows
 npm run install:all-win
-# or
-npm run build:sc-web
-npm run build:backend-win
-
 ```
-### 2. Установка Python зависимостей
+
+### 3. Запуск
+
+Для запуска требуется запущенная sc-machine по адресу `ws://localhost:8090/ws_json` либо указать через переменную окружения `SC_SERVER_HOST` и `SC_SERVER_PORT`.
 
 ```bash
-# Создание виртуального окружения
-python3 -m venv .venv
-
-# Активация виртуального окружения
-# Linux/macOS:
-source .venv/bin/activate
-# Windows:
-.venv\Scripts\activate
-
-# Установка зависимостей
-pip install -r requirements.txt
-```
-
-### 3. Установка Node.js зависимостей и сборка SC-Web
-
-```bash
-# Установка зависимостей проекта
-npm install
-
-# Сборка SC-Web
-cd external/sc-web
-npm install
-npm run build
-cd ../..
-```
-
-### 4. Запуск сервисов
-
-Для запуска требуется запущенная sc-machine по адресу ws://localhost:8090/ws_json либо указать через переменную окружения SC_MACHINE_URL
-#### Вариант A: Через npm
-
-Откройте **четыре терминала**:
-```bash 
-    #work
-    npm run start:frontend
-    #work
-    npm run start:proxy
-    #backend implemented
-    npm run start:backend
-    #work
-    npm run start:sc-web
-```
-#### Вариант B: Покомпонентный запуск (рекомендуется для разработки)
-
-Откройте **четыре терминала**:
-
-```bash
-# Терминал 1: Proxy Server (SC-Web)
-# Проксирует запросы на localhost:8000, кэширует статику
-PYTHONPATH=. python server/proxy_server.py
-# Доступен: http://localhost:8888
-
-# Терминал 2: Frontend Server
-python -m http.server 3000 --directory src/frontend
-# Доступен: http://localhost:3000
-
-# Терминал 3: Backend API (если реализован)
-python src/backend/app.py
-# Доступен: http://localhost:5000
- 
-python external/sc-web/server/app.py
+npm run start:backend
 # Доступен: http://localhost:8000
 ```
 
-
-#### Вариант B: Docker
-
-```bash
-docker build -t plant-uml-web .
-
-docker run -p 3000:3000 -p 8888:8888 -p 5000:5000 \
-  -e SC_SERVER_URL=ws://host.docker.internal:8090/ws_json \
-  plant-uml-web
-```
-
-> **Примечание:** Для доступа к sc-machine из Docker используйте `host.docker.internal` (Linux: `--add-host=host.docker.internal:host-gateway`)
-
 ---
 
-##  Конфигурация
+## Конфигурация
 
 ### Переменные окружения
 
 | Переменная | Значение по умолчанию | Описание |
 |------------|----------------------|----------|
-| `SC_SERVER_URL` | `ws://localhost:8090/ws_json` | URL подключения к sc-machine |
-| `CACHE_CHECK_INTERVAL` | `0` | Интервал обновления кэша proxy (сек, 0 = без обновления) |
-| `PYTHONUNBUFFERED` | `1` | Буферизация вывода Python |
+| `SC_SERVER_HOST` | `localhost` | Хост sc-machine |
+| `SC_SERVER_PORT` | `8090` | Порт sc-machine |
+| `HOST` | `0.0.0.0` | Хост приложения |
+| `PORT` | `8000` | Порт приложения |
 
 ### Настройка подключения к sc-machine
 
 ```bash
 # Linux/macOS
-export SC_SERVER_URL=ws://your-server:8090/ws_json
+export SC_SERVER_HOST=your-server
+export SC_SERVER_PORT=8090
 
 # Windows (PowerShell)
-$env:SC_SERVER_URL="ws://your-server:8090/ws_json"
+$env:SC_SERVER_HOST="your-server"
+$env:SC_SERVER_PORT="8090"
 ```
 
 ---
 
-##  Структура проекта
+## Структура проекта
 
 ```
 plant-uml-web/
 ├── src/
-│   ├── frontend/              # Фронтенд приложение
-│   │   ├── index.html         # Главная страница
-│   │   ├── sc-web-iframe.html # Iframe для SC-Web
-│   │   ├── css/               # Стили
-│   │   │   ├── main.css       # Базовые стили
-│   │   │   ├── panels.css     # Система панелей
-│   │   │   ├── editor.css     # Редакторы
-│   │   │   ├── assistant.css  # AI ассистент
-│   │   │   └── settings.css   # Настройки
+│   ├── frontend/                    # Фронтенд приложение
+│   │   ├── index.html               # Страница авторизации
+│   │   ├── app.html                # Главная страница приложения
+│   │   ├── sc-web-iframe.html      # SC-Web в iframe
+│   │   ├── css/                    # Стили
+│   │   │   ├── main.css            # Базовые стили
+│   │   │   ├── panels.css          # Система панелей
+│   │   │   ├── editor.css          # Редакторы
+│   │   │   ├── assistant.css       # AI ассистент
+│   │   │   └── settings.css        # Настройки
 │   │   └── js/
-│   │       ├── app.js         # Главный контроллер
-│   │       ├── config.js      # Конфигурация
+│   │       ├── app.js              # Главный контроллер
+│   │       ├── config.js           # Конфигурация
+│   │       ├── sc-web-main.js      # SC-Web инициализация
 │   │       ├── api/
-│   │       │   └── client.js  # API клиент
+│   │       │   └── client.js       # API клиент
+│   │       ├── auth/
+│   │       │   ├── auth-manager.js # Менеджер авторизации
+│   │       │   └── auth-page.js   # Страница авторизации
 │   │       ├── editors/
-│   │       │   ├── editor-manager.js
+│   │       │   ├── editor-manager.js      # Управление редакторами
 │   │       │   └── scs-bundle/
-│   │       │       └── scs-language.js  # Поддержка ScS
+│   │       │       └── scs-language.js   # Поддержка ScS
 │   │       ├── panels/
 │   │       │   ├── panel-system.js
 │   │       │   ├── resizable.js
@@ -222,31 +148,31 @@ plant-uml-web/
 │   │       │   └── chat-window.js
 │   │       └── settings/
 │   │           └── modal.js
-│   └── backend/               # Backend (Flask)
-│       └── app.py             # API endpoints
-├── server/
-│   ├── proxy_server.py        # Proxy сервер для SC-Web
-│   └── cache.py               # Кэширование статики
+│   └── backend/                    # Backend (FastAPI)
+│       ├── main.py                 # Точка входа
+│       ├── config.py               # Конфигурация
+│       ├── deps.py                 # Зависимости
+│       └── router.py               # Роутер API
 ├── external/
-│   ├── sc-web/                # SC-Web платформа
-│   ├── py-sc-client/          # Python клиент для sc-machine
-│   └── py-sc-kpm/             # Knowledge Processing Module
-├── package.json               # Node.js зависимости
-├── requirements.txt           # Python зависимости
-├── Dockerfile                 # Docker образ
-└── README.md                  # Документация
+│   ├── sc-web/                    # SC-Web платформа
+│   ├── py-sc-client/              # Python клиент для sc-machine
+│   └── py-sc-kpm/                 # Knowledge Processing Module
+├── package.json                   # Node.js зависимости
+├── requirements.txt               # Python зависимости
+└── README.md                      # Документация
 ```
 
+---
 
-### Сборка SC-Web
+## Сборка SC-Web
 
 ```bash
-cd external/sc-web
-npm install
-npm run build
+npm run build:sc-web
 ```
 
-### Добавление новых ScS ключевых слов
+---
+
+## Добавление новых ScS ключевых слов
 
 Отредактируйте `src/frontend/js/editors/scs-bundle/scs-language.js`:
 
@@ -257,10 +183,9 @@ const kKeywords = [
 ];
 ```
 
-
 ---
 
-##  Ссылки
+## Ссылки
 
 - [OSTIS](https://ostis.net/)
 - [sc-machine](https://github.com/ostis-ai/sc-machine)
