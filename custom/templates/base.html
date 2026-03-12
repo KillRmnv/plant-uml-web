@@ -141,7 +141,54 @@
                 };
                 $.when(SCWeb.core.Main.init(params)).done(function () {
                     SCWeb.ui.Locker.hide();
-                    console.log("[Minimal] SCWeb инициализирован");
+
+                    // Принудительно устанавливаем режимы после инициализации
+                    SCWeb.core.ExpertModeEnabled = true;
+                    SCWeb.core.EventManager.emit("expert_mode_changed");
+                    SCWeb.core.Main.editMode = SCgEditMode.SCgModeSelect;
+                    SCWeb.core.Main.viewMode = SCgViewMode.DefaultSCgView;
+
+                    console.log(
+                        "[Minimal] SCWeb инициализирован (Expert Mode: ON, Editor: SCg)",
+                    );
+
+                    // Программный клик на SCg (первый элемент в dropdown)
+                    setTimeout(function () {
+                        console.log(
+                            "[Minimal] Программный клик на первый элемент dropdown (SCg)...",
+                        );
+
+                        // Проверяем содержимое dropdown
+                        var allLinks = $("#history-item-langs a");
+                        console.log(
+                            "[Minimal] Найдено ссылок в dropdown:",
+                            allLinks.length,
+                        );
+                        allLinks.each(function (i, el) {
+                            console.log(
+                                "[Minimal] Элемент",
+                                i,
+                                ":",
+                                $(el).attr("sc_addr"),
+                                $(el).text(),
+                            );
+                        });
+
+                        // Клик на первый элемент (SCg)
+                        var firstLink = $(
+                            "#history-item-langs li:first-child a",
+                        );
+                        if (firstLink.length > 0) {
+                            var addr = firstLink.attr("sc_addr");
+                            console.log(
+                                "[Minimal] Клик на элемент с sc_addr:",
+                                addr,
+                            );
+                            firstLink.click();
+                        } else {
+                            console.log("[Minimal] dropdown пуст");
+                        }
+                    }, 1500);
                 });
             });
         </script>

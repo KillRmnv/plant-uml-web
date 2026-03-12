@@ -81,7 +81,19 @@ if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.Core) {
         SCWeb.ui.Core.resolveElementsAddr("body"),
       ]).then(function () {
         $("#search-panel").removeClass("no_display");
-        console.log("[Minimal] UI инициализирован");
+
+        // Включаем экспертный режим по умолчанию
+        SCWeb.core.ExpertModeEnabled = true;
+        SCWeb.core.EventManager.emit("expert_mode_changed");
+
+        // Устанавливаем SCg режим по умолчанию
+        SCWeb.core.Main.editMode = SCgEditMode.SCgModeSelect;
+        SCWeb.core.Main.editMode;
+        SCWeb.core.Main.viewMode = SCgViewMode.DefaultSCgView;
+
+        console.log(
+          "[Minimal] UI инициализирован (Expert Mode: ON, Editor: SCg)",
+        );
         resolve();
       });
     });
@@ -182,6 +194,30 @@ SCWeb.core.Main = {
       SCWeb.core.ComponentManager.init(),
       SCWeb.core.Translation.update(),
     ]);
+  },
+
+  showDefaultPage: async function (params) {
+    console.log("[Minimal] showDefaultPage вызван");
+
+    function start(a) {
+      console.log("[Minimal] start() с адресом:", a);
+      SCWeb.core.Main.doDefaultCommand([a]);
+      if (params.first_time) $("#help-modal").modal({ keyboard: true });
+    }
+
+    const argumentAddr = window.scKeynodes["ui_start_sc_element"];
+    console.log("[Minimal] argumentAddr:", argumentAddr);
+
+    let startScElements = await window.scHelper.getSetElements(argumentAddr);
+    console.log("[Minimal] startScElements:", startScElements);
+
+    if (startScElements.length) {
+      start(startScElements[0]);
+    } else {
+      start(argumentAddr);
+    }
+
+    $(".copyright").text(`Copyright © 2012 - ${currentYear} OSTIS`);
   },
 
   pageShowedForUrlParameters(urlObject) {
