@@ -1,5 +1,6 @@
 # Main - FastAPI entry point
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -67,30 +68,34 @@ app.add_middleware(
 # Include API router
 app.include_router(router)
 
-# Static files - /static/
-app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
-logger.info(f"Mounted static: {STATIC_PATH}")
 
-# Custom JS - /custom/js/
+# Routes for HTML pages (must be before static mount)
+@app.get("/", response_class=HTMLResponse)
+async def main_page():
+    """Main page - serve login page"""
+    with open(os.path.join(FRONTEND_PATH, "index.html"), "r") as f:
+        return f.read()
+
+
+@app.get("/app", response_class=HTMLResponse)
+@app.get("/app/", response_class=HTMLResponse)
+async def app_page():
+    """Main app page - serve app.html"""
+    with open(os.path.join(FRONTEND_PATH, "app.html"), "r") as f:
+        return f.read()
+
+
+# Custom JS - /custom/js/ (must be before catch-all /)
 app.mount("/custom/js", StaticFiles(directory=CUSTOM_JS_PATH), name="custom_js")
 logger.info(f"Mounted custom js: {CUSTOM_JS_PATH}")
 
-# Frontend - /app/
-app.mount("/app", StaticFiles(directory=FRONTEND_PATH, html=True), name="frontend")
+# Static files - / (serves frontend files, must be last)
+app.mount("/", StaticFiles(directory=FRONTEND_PATH), name="frontend")
 logger.info(f"Mounted frontend: {FRONTEND_PATH}")
 
-# Jinja2 templates for sc-web
-env = Environment(loader=FileSystemLoader(TEMPLATES_PATH))
-
-
-@app.get("/", response_class=HTMLResponse)
-async def main_page():
-    """Main page - serve sc-web template"""
-    template = env.get_template("base.html")
-    html = template.render(
-        has_entered=False, user=None, first_time="0", public_url=PUBLIC_URL
-    )
-    return html
+# Static files - /static/
+app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
+logger.info(f"Mounted static: {STATIC_PATH}")
 
 
 @app.get("/health")
