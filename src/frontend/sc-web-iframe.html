@@ -20,6 +20,16 @@
         <link
             rel="stylesheet"
             type="text/css"
+            href="/static/common/highlight/googlecode.css"
+        />
+        <link
+            rel="stylesheet"
+            type="text/css"
+            href="/static/common/context/context.standalone.css"
+        />
+        <link
+            rel="stylesheet"
+            type="text/css"
             href="/static/components/css/common.css"
         />
         <link
@@ -37,20 +47,50 @@
             type="text/css"
             href="/static/components/css/scs.css"
         />
+        <link
+            rel="stylesheet"
+            type="text/css"
+            href="/static/components/css/html.css"
+        />
+        <link
+            rel="stylesheet"
+            type="text/css"
+            href="/static/components/css/github.css"
+        />
 
-        {% include 'common.html' %} {% include 'components.html' %}
+        <script type="text/javascript" charset="utf-8" src="/static/common/jquery/jquery-2.1.3.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/jquery/jquery.namespace.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/bootstrap/js/bootstrap.min.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/typeahead/typeahead.bundle.min.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/context/context.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/kinetic/kinetic-v4.0.1.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/d3/d3.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/highlight/highlight.min.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/base64/base64.min.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/pdf/pdf.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/common/pdf/pdf.worker.js"></script>
+
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/sc-web-core.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/scs/scs.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/scg/scg.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/image/image.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/txt/txt.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/html/html.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/youtube/youtubelink.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/map/googlemaplink.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/github/github.js"></script>
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/pdf/pdf.js"></script>
+
+        <script type="text/javascript" charset="utf-8" src="/static/components/js/file-saver/FileSaver.min.js"></script>
+
+        <script>
+            var serverHost = "ws://localhost:8090/ws_json";
+        </script>
     </head>
 
     <body id="body">
-        <script>
-            var serverHost = "{{ public_url }}";
-        </script>
-
-        <!-- Минимальный контейнер - только поиск и окна -->
         <div id="main-container" class="main-container">
-            <!-- Панель инструментов (поиск) -->
             <div id="window-header-tools" class="pull-right">
-                <!-- Mode switching panel (hidden) -->
                 <div class="btn-group mode-switching-panel" style="margin-right: 15px; display: none;">
                     <button
                         type="button"
@@ -111,14 +151,12 @@
                 </div>
             </div>
 
-            <!-- Контейнер окон -->
             <div
                 id="window-container"
                 class="col-xs-12 col-sm-12 col-md-12"
             ></div>
         </div>
 
-        <!-- Locker (индикатор загрузки) -->
         <div id="sc-ui-locker">
             <div id="sc-ui-locker-text">Loading...</div>
             <div id="sc-ui-locker-icon"></div>
@@ -126,11 +164,10 @@
 
         <div id="sctp-reconnection"></div>
 
-        <!-- Подключаем кастомный main.js с отключенными компонентами -->
         <script
             type="text/javascript"
             charset="utf-8"
-            src="/custom/js/main.js"
+            src="/js/sc-web-main.js"
         ></script>
 
         <script type="text/javascript">
@@ -141,54 +178,7 @@
                 };
                 $.when(SCWeb.core.Main.init(params)).done(function () {
                     SCWeb.ui.Locker.hide();
-
-                    // Принудительно устанавливаем режимы после инициализации
-                    SCWeb.core.ExpertModeEnabled = true;
-                    SCWeb.core.EventManager.emit("expert_mode_changed");
-                    SCWeb.core.Main.editMode = SCgEditMode.SCgModeSelect;
-                    SCWeb.core.Main.viewMode = SCgViewMode.DefaultSCgView;
-
-                    console.log(
-                        "[Minimal] SCWeb инициализирован (Expert Mode: ON, Editor: SCg)",
-                    );
-
-                    // Программный клик на SCg (первый элемент в dropdown)
-                    setTimeout(function () {
-                        console.log(
-                            "[Minimal] Программный клик на первый элемент dropdown (SCg)...",
-                        );
-
-                        // Проверяем содержимое dropdown
-                        var allLinks = $("#history-item-langs a");
-                        console.log(
-                            "[Minimal] Найдено ссылок в dropdown:",
-                            allLinks.length,
-                        );
-                        allLinks.each(function (i, el) {
-                            console.log(
-                                "[Minimal] Элемент",
-                                i,
-                                ":",
-                                $(el).attr("sc_addr"),
-                                $(el).text(),
-                            );
-                        });
-
-                        // Клик на первый элемент (SCg)
-                        var firstLink = $(
-                            "#history-item-langs li:first-child a",
-                        );
-                        if (firstLink.length > 0) {
-                            var addr = firstLink.attr("sc_addr");
-                            console.log(
-                                "[Minimal] Клик на элемент с sc_addr:",
-                                addr,
-                            );
-                            firstLink.click();
-                        } else {
-                            console.log("[Minimal] dropdown пуст");
-                        }
-                    }, 1500);
+                    console.log("[Minimal] SCWeb инициализирован");
                 });
             });
         </script>

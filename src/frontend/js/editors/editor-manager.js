@@ -113,7 +113,7 @@ class EditorManager {
         container.style.height = '100%';
         
         const iframe = document.createElement('iframe');
-        iframe.src = 'sc-web-iframe.html';
+        iframe.src = '/sc-web-iframe.html';
         iframe.style.cssText = 'width:100%;height:100%;border:none;';
         
         container.appendChild(iframe);

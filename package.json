@@ -2,14 +2,11 @@
   "name": "plant-uml-web",
   "version": "1.0.0",
   "description": "Plant UML Editor with py-sc-client, py-sc-kpm,sc-web,js-scs-editor",
-  "main": "src/backend/app.py",
+  "main": "src/backend/main.py",
   "scripts": {
     "build:sc-web": "npm install && cd external/sc-web && npm install && npm run build && pip install -r requirements.txt",
-    "start:frontend": "python -m http.server 3000 --directory src/frontend",
-    "start:proxy": "PYTHONPATH=. python server/proxy_server.py",
-    "start:backend": "python src/backend/app.py",
-    "start:sc-web": "python external/sc-web/server/app.py",
-    "build:backend-linux ": "python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
+    "start:backend": "python src/backend/main.py",
+    "build:backend-linux": "python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
     "build:backend-win": "python3 -m venv .venv && .venv\\Scripts\\activate && pip install -r requirements.txt",
     "install:all-linux": "python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && npm install && cd external/sc-web && npm install && npm run build",
     "install:all-win": "python3 -m venv .venv && .venv\\\\Scripts\\\\activate && pip install -r requirements.txt && npm install && cd external/sc-web && npm install && npm run build"
