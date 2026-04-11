@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import tornado mock for compatibility
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import tornado_mock
-
 import base64
 import hashlib
 import logging
@@ -15,7 +8,7 @@ import threading
 import uuid
 from typing import List, Dict
 
-import tornado.web
+from fastapi import HTTPException
 from sc_client import client
 from sc_client.constants import sc_type
 from sc_client.models import (
@@ -32,6 +25,7 @@ from sc_client.sc_keynodes import ScKeynodes
 import decorators
 from keynodes import KeynodeSysIdentifiers
 from .base import BaseHandler
+from backend.app.config import settings
 
 __all__ = (
     "parse_menu_command",
@@ -272,7 +266,7 @@ def find_result(action_addr: ScAddr) -> List[ScTemplateResult]:
     begin_time = time.time()
     result = _get_result()
     while (
-        (begin_time + tornado.options.options.action_result_wait_timeout) > time.time()
+        (begin_time + settings.action_result_wait_timeout) > time.time()
     ) and result == None:
         time.sleep(wait_dt)
         result = _get_result()
@@ -600,7 +594,7 @@ def do_command(cmd_addr: ScAddr, arguments: List[ScAddr], handler: BaseHandler):
         while True:
             time.sleep(wait_dt)
             wait_time += wait_dt
-            if wait_time > tornado.options.options.event_wait_timeout:
+            if wait_time > settings.event_wait_timeout:
                 return serialize_error(
                     handler,
                     404,

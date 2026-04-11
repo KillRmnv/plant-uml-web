@@ -2,21 +2,16 @@
 import logging
 import time
 
-from fastapi import APIRouter, Request, Form, Response
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter, Request, Form
 
 from sc_client import client
 from sc_client.constants import sc_type
 from sc_client.models import ScAddr
 from sc_client.sc_keynodes import ScKeynodes
 
-from keynodes import KeynodeSysIdentifiers
+from backend.app.integrations.keynodes import KeynodeSysIdentifiers
 from handlers import api_logic as logic
-from config import (
-    EVENT_WAIT_TIMEOUT,
-    ACTION_RESULT_WAIT_TIMEOUT,
-    PUBLIC_URL,
-)
+from backend.app.config import settings
 
 logger = logging.getLogger()
 router = APIRouter()
@@ -150,7 +145,7 @@ async def api_action_result_translate(
     while not result:
         time.sleep(wait_dt)
         wait_time += wait_dt
-        if wait_time > EVENT_WAIT_TIMEOUT:
+        if wait_time > settings.event_wait_timeout:
             return {"error": "Timeout waiting for result"}
         result = logic.find_result(action_addr)
 
@@ -194,7 +189,7 @@ async def api_action_result_translate(
         while not translation.is_valid():
             time.sleep(wait_dt)
             wait_time += wait_dt
-            if wait_time > EVENT_WAIT_TIMEOUT:
+            if wait_time > settings.event_wait_timeout:
                 return {"error": "Timeout waiting for result translation"}
             translation = logic.find_translation_with_format(result_addr, format_addr)
 

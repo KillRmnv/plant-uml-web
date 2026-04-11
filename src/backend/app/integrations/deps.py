@@ -1,6 +1,5 @@
 # Dependencies - SC-Client integration
 import sys
-import os
 from pathlib import Path
 
 # Add external packages to path
@@ -14,8 +13,8 @@ from sc_client import client
 from sc_client.constants.exceptions import ServerError
 from sc_client.sc_keynodes import ScKeynodes
 
-from keynodes import KeynodeSysIdentifiers
-from scs_loader import load_scs_fragments
+from backend.app.integrations.keynodes import KeynodeSysIdentifiers
+from backend.app.integrations.scs_loader import load_scs_fragments
 
 logger = logging.getLogger()
 

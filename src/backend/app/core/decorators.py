@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
-
-import tornado.options
-import tornado.web
+from fastapi import HTTPException
 from functools import wraps
 from typing import TypeVar, Callable
 
@@ -12,7 +10,7 @@ def requestAdmin(method):
         if self.current_user and self.current_user.can_admin():
             return method(self, *args, **kwargs)
 
-        raise tornado.web.HTTPError(401)
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     return wrapper
 
