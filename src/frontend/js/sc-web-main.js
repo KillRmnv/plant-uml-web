@@ -1,3 +1,42 @@
+// ─────────────────────────────────────────────
+// API URL rewrite: /api/... → /api/v1/sc-web/...
+// Must run BEFORE SCWeb.core.Server._initialize()
+// ─────────────────────────────────────────────
+(function() {
+    var originalAjax = $.ajax;
+    var SC_WEB_PREFIX = '/api/v1/sc-web/';
+    var LEGACY_PREFIXES = ['api/context/', 'api/cmd/', 'api/languages/', 'api/info/', 'api/action/', 'api/user/', 'api/idtf/'];
+
+    function rewriteUrl(url) {
+        if (!url) return url;
+        // Already versioned, no rewrite needed
+        if (url.indexOf('/api/v1/') !== -1) return url;
+        // Check if it's a legacy SC-web URL
+        for (var i = 0; i < LEGACY_PREFIXES.length; i++) {
+            if (url.indexOf(LEGACY_PREFIXES[i]) === 0 || url === LEGACY_PREFIXES[i].slice(0, -1)) {
+                // Replace 'api/' prefix with versioned one
+                var newPath = url.replace(/^api\//, 'api/v1/sc-web/');
+                console.log('[API Rewrite]', url, '→', newPath);
+                return newPath;
+            }
+        }
+        return url;
+    }
+
+    $.ajax = function(urlOrSettings, settings) {
+        if (typeof urlOrSettings === 'string') {
+            // $.ajax(url, settings) form
+            urlOrSettings = rewriteUrl(urlOrSettings);
+        } else if (urlOrSettings && typeof urlOrSettings === 'object' && urlOrSettings.url) {
+            // $.ajax(settings) form
+            urlOrSettings.url = rewriteUrl(urlOrSettings.url);
+        }
+        return originalAjax.call(this, urlOrSettings, settings);
+    };
+
+    console.log('[API Rewrite] Installed - SC-web URLs will be rewritten to /api/v1/sc-web/');
+})();
+
 console.log("[Custom] ===== main.js НАЧАЛО ЗАГРУЗКИ =====");
 console.log("[Custom] SCWeb:", typeof SCWeb);
 console.log("[Custom] SCWeb.ui:", typeof SCWeb?.ui);

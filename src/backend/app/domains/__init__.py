@@ -1,1 +1,1 @@
-# Domains module
+"""Domain modules - business logic layers."""

@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 
 from backend.app.config import settings
 from backend.app.integrations.deps import init_sc_client, disconnect
-from router import router
+from backend.app.api.v1.api import router as api_v1_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan events"""
+    """Lifespan events - init/shutdown SC-client"""
     logger.info("Starting PlantUML Web Backend (FastAPI)...")
     logger.info(f"SC-Machine URL: {settings.public_url}")
     logger.info(f"Static path: {settings.static_path}")
@@ -52,11 +52,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API router
-app.include_router(router)
+# Include v1 API router (includes SC-web legacy at /api/v1/sc-web/...)
+app.include_router(api_v1_router)
 
 
-# Routes for HTML pages (must be before static mount)
+# ─────────────────────────────────────────────
+# Frontend pages (must be before static mount)
+# ─────────────────────────────────────────────
+
 @app.get("/", response_class=HTMLResponse)
 async def main_page():
     """Main page - serve login page"""
@@ -72,11 +75,15 @@ async def app_page():
         return f.read()
 
 
-# Static files - /static/ (must be before catch-all /)
+# ─────────────────────────────────────────────
+# Static files
+# ─────────────────────────────────────────────
+
+# /static/ (must be before catch-all /)
 app.mount("/static", StaticFiles(directory=settings.static_path), name="static")
 logger.info(f"Mounted static: {settings.static_path}")
 
-# Static files - / (serves frontend files, must be last)
+# / (serves frontend files, must be last)
 app.mount("/", StaticFiles(directory=settings.frontend_path), name="frontend")
 logger.info(f"Mounted frontend: {settings.frontend_path}")
 

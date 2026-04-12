@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+"""SC-machine session and command logic - integration with sc-web."""
 
 import base64
 import hashlib
 import logging
 import time
-import threading
 import uuid
 from typing import List, Dict
 
@@ -22,31 +22,36 @@ from sc_client.models import (
 )
 from sc_client.sc_keynodes import ScKeynodes
 
-import decorators
-from keynodes import KeynodeSysIdentifiers
-from .base import BaseHandler
+from backend.app.core.decorators import method_logging, class_logging
+from backend.app.integrations.keynodes import KeynodeSysIdentifiers
 from backend.app.config import settings
 
 __all__ = (
     "parse_menu_command",
+    "find_atomic_commands",
+    "find_tooltip",
     "find_cmd_result",
     "find_result",
     "find_translation",
+    "find_translation_with_format",
     "check_command_finished",
+    "check_command_failed",
     "append_to_system_elements",
+    "get_languages_list",
+    "do_command",
+    "get_system_identifier",
+    "get_identifier_translated",
+    "ScSession",
 )
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
-@decorators.method_logging
-def serialize_error(handler, code, message):
-    handler.clear()
-    handler.set_status(code)
-    handler.finish(message)
+# ─────────────────────────────────────────────
+# SC-machine query functions
+# ─────────────────────────────────────────────
 
-
-@decorators.method_logging
+@method_logging
 def parse_menu_command(cmd_addr: ScAddr):
     """Parse specified command from sc-memory and
     return hierarchy map (with children), that represent it
@@ -107,7 +112,7 @@ def parse_menu_command(cmd_addr: ScAddr):
     return attrs
 
 
-@decorators.method_logging
+@method_logging
 def find_atomic_commands(cmd_addr: ScAddr, commands: List[int]):
     """Parse specified command from sc-memory and
     return hierarchy map (with children), that represent it
@@ -147,7 +152,7 @@ def find_atomic_commands(cmd_addr: ScAddr, commands: List[int]):
         find_atomic_commands(child.get(CHILD_NODE), commands)
 
 
-@decorators.method_logging
+@method_logging
 def find_tooltip(addr: ScAddr, lang) -> str:
     keynodes = ScKeynodes()
 
@@ -232,7 +237,7 @@ def find_tooltip(addr: ScAddr, lang) -> str:
     return ""
 
 
-@decorators.method_logging
+@method_logging
 def find_cmd_result(command_addr: ScAddr) -> List[ScTemplateResult]:
     keynodes = ScKeynodes()
 
@@ -247,7 +252,7 @@ def find_cmd_result(command_addr: ScAddr) -> List[ScTemplateResult]:
     return client.search_by_template(template)
 
 
-@decorators.method_logging
+@method_logging
 def find_result(action_addr: ScAddr) -> List[ScTemplateResult]:
     def _get_result():
         keynodes = ScKeynodes()
@@ -267,13 +272,13 @@ def find_result(action_addr: ScAddr) -> List[ScTemplateResult]:
     result = _get_result()
     while (
         (begin_time + settings.action_result_wait_timeout) > time.time()
-    ) and result == None:
+    ) and result is None:
         time.sleep(wait_dt)
         result = _get_result()
     return result
 
 
-@decorators.method_logging
+@method_logging
 def find_translation(construction_addr: ScAddr) -> List[ScTemplateResult]:
     keynodes = ScKeynodes()
 
@@ -288,7 +293,7 @@ def find_translation(construction_addr: ScAddr) -> List[ScTemplateResult]:
     return client.search_by_template(template)
 
 
-@decorators.method_logging
+@method_logging
 def find_translation_with_format(construction_addr, format_addr) -> ScAddr:
     translations = find_translation(construction_addr)
 
@@ -311,35 +316,7 @@ def find_translation_with_format(construction_addr, format_addr) -> ScAddr:
     return ScAddr(0)
 
 
-@decorators.method_logging
-def get_by_system_identifier(idtf) -> ScAddr:
-    links = client.search_links_by_contents(idtf)
-    if links:
-        for link in links:
-            get_by_link_addr(link)
-    return ScAddr(0)
-
-
-@decorators.method_logging
-def get_by_link_addr(link_addr) -> ScAddr:
-    keynodes = ScKeynodes()
-
-    template = ScTemplate()
-    template.quintuple(
-        sc_type.UNKNOWN,
-        sc_type.VAR_COMMON_ARC,
-        link_addr,
-        sc_type.VAR_PERM_POS_ARC,
-        keynodes[KeynodeSysIdentifiers.nrel_system_identifier.value],
-    )
-    elements = client.search_by_template(template)
-    if elements:
-        return elements[0].get(0)
-
-    return ScAddr(0)
-
-
-@decorators.method_logging
+@method_logging
 def get_identifier_translated(addr: ScAddr, used_lang: ScAddr) -> str:
     keynodes = ScKeynodes()
 
@@ -384,46 +361,7 @@ def get_system_identifier(addr: ScAddr):
     return ""
 
 
-@decorators.method_logging
-def get_by_identifier_translated(used_lang: ScAddr, idtf: str):
-    keynodes_idtfs = []
-
-    keynodes = ScKeynodes()
-    keynodes_idtfs.append(keynodes[KeynodeSysIdentifiers.nrel_main_idtf.value])
-    keynodes_idtfs.append(keynodes[KeynodeSysIdentifiers.nrel_idtf.value])
-
-    links = client.search_links_by_contents(idtf)
-    for link in links:
-        get_by_link_addr_translated(used_lang, link)
-
-
-@decorators.method_logging
-def get_by_link_addr_translated(used_lang: ScAddr, link: ScAddr) -> ScAddr:
-    keynodes_idtfs = []
-
-    keynodes = ScKeynodes()
-    keynodes_idtfs.append(keynodes[KeynodeSysIdentifiers.nrel_main_idtf.value])
-    keynodes_idtfs.append(keynodes[KeynodeSysIdentifiers.nrel_idtf.value])
-
-    ELEMENT_NODE = "_element"
-    for keynode_idtf in keynodes_idtfs:
-        template = ScTemplate()
-        template.quintuple(
-            (sc_type.UNKNOWN, ELEMENT_NODE),
-            sc_type.VAR_COMMON_ARC,
-            link,
-            sc_type.VAR_PERM_POS_ARC,
-            keynode_idtf,
-        )
-        template.triple(used_lang, sc_type.VAR_PERM_POS_ARC, link)
-        elements = client.search_by_template(template)
-        if elements:
-            return elements[0].get(ELEMENT_NODE)
-
-    return ScAddr(0)
-
-
-@decorators.method_logging
+@method_logging
 def check_command_finished(command_addr: ScAddr) -> bool:
     keynodes = ScKeynodes()
 
@@ -436,7 +374,7 @@ def check_command_finished(command_addr: ScAddr) -> bool:
     return bool(client.search_by_template(template))
 
 
-@decorators.method_logging
+@method_logging
 def check_command_failed(command_addr: ScAddr) -> bool:
     keynodes = ScKeynodes()
 
@@ -449,7 +387,7 @@ def check_command_failed(command_addr: ScAddr) -> bool:
     return bool(client.search_by_template(template))
 
 
-@decorators.method_logging
+@method_logging
 def append_to_system_elements(keynode_system_element: ScAddr, el: ScAddr) -> None:
     construction = ScConstruction()
     construction.generate_connector(
@@ -458,7 +396,7 @@ def append_to_system_elements(keynode_system_element: ScAddr, el: ScAddr) -> Non
     client.generate_elements(construction)
 
 
-@decorators.method_logging
+@method_logging
 def get_languages_list() -> List[ScAddr]:
     keynodes = ScKeynodes()
 
@@ -476,8 +414,12 @@ def get_languages_list() -> List[ScAddr]:
     return langs
 
 
-@decorators.method_logging
-def do_command(cmd_addr: ScAddr, arguments: List[ScAddr], handler: BaseHandler):
+# ─────────────────────────────────────────────
+# Command execution
+# ─────────────────────────────────────────────
+
+@method_logging
+def do_command(cmd_addr: ScAddr, arguments: List[ScAddr]):
     result = {}
 
     if cmd_addr.is_valid():
@@ -568,8 +510,8 @@ def do_command(cmd_addr: ScAddr, arguments: List[ScAddr], handler: BaseHandler):
                 ScIdtfResolveParams(idtf="rrel_%d" % idx, type=None)
             )[0]
             if not idx_addr.is_valid():
-                return serialize_error(
-                    handler, 404, 'Error while create "create_instance" command'
+                raise HTTPException(
+                    status_code=404, detail='Error while create "create_instance" command'
                 )
             idx_arc_addr = "idx_arc_addr_%d" % idx
             construction.generate_connector(
@@ -595,10 +537,9 @@ def do_command(cmd_addr: ScAddr, arguments: List[ScAddr], handler: BaseHandler):
             time.sleep(wait_dt)
             wait_time += wait_dt
             if wait_time > settings.event_wait_timeout:
-                return serialize_error(
-                    handler,
-                    404,
-                    'Timeout waiting for "create_instance" command finished',
+                raise HTTPException(
+                    status_code=404,
+                    detail='Timeout waiting for "create_instance" command finished',
                 )
             is_cmd_finished = check_command_finished(inst_cmd_addr)
 
@@ -619,18 +560,18 @@ def do_command(cmd_addr: ScAddr, arguments: List[ScAddr], handler: BaseHandler):
         )
         cmd_result = client.search_by_template(template)
         if cmd_result is None:
-            return serialize_error(
-                handler, 404, 'Can\'t find "create_instance" command result'
+            raise HTTPException(
+                status_code=404, detail='Can\'t find "create_instance" command result'
             )
 
         cmd_result = cmd_result[0].get(2)
 
         # @todo support all possible commands
 
-        sc_session = ScSession(handler)
+        sc_session = ScSession()
         user_node = sc_session.get_sc_addr()
-        if not user_node:
-            return serialize_error(handler, 404, "Can't resolve user node")
+        if not user_node.is_valid():
+            raise HTTPException(status_code=404, detail="Can't resolve user node")
 
         keynode_init_set = None
         keynode_action = keynodes[KeynodeSysIdentifiers.action.value]
@@ -783,23 +724,25 @@ def do_command(cmd_addr: ScAddr, arguments: List[ScAddr], handler: BaseHandler):
     return result
 
 
-# -------------- work with session -------------------------
-@decorators.class_logging
+# ─────────────────────────────────────────────
+# Session management
+# ─────────────────────────────────────────────
+
+@class_logging
 class ScSession:
-    def __init__(self, handler):
-        """Initialize session class with requests.user object"""
+    def __init__(self, session_key: str = None, user_email: str = None):
+        """Initialize session class with session_key string and optional user email"""
 
-        self.handler = handler
-
-        self.user = handler.current_user
-        self.session_key = handler.get_secure_cookie("session_key")
+        self.session_key = session_key
+        self.user_email = user_email  # Email for authenticated users
         self.keynodes = ScKeynodes()
         self.sc_addr = ScAddr(0)
         self.email = None
 
     def get_user_kb_node_by_email(self) -> ScAddr:
-        if self is not None:
-            links = client.search_links_by_contents(str(self.user.email))[0]
+        """Find user node in knowledge base by email"""
+        if self.user_email:
+            links = client.search_links_by_contents(str(self.user_email))
             if links and len(links) == 1:
                 template = ScTemplate()
                 template.quintuple(
@@ -819,16 +762,17 @@ class ScSession:
     def get_sc_addr(self) -> ScAddr:
         """Resolve sc-addr of session"""
         if not self.sc_addr.is_valid():
-            if self.user is not None:
+            # If authenticated user with email, use user session
+            if self.user_email:
                 self.sc_addr = self._user_get_sc_addr()
                 if not self.sc_addr.is_valid():
                     self.sc_addr = self._user_new()
             else:
+                # Anonymous session via session_key
                 if self.session_key is None:
                     self.session_key = base64.b64encode(
                         uuid.uuid4().bytes + uuid.uuid4().bytes
-                    )
-                    self.handler.set_secure_cookie("session_key", self.session_key)
+                    ).decode('utf-8')
                 self.sc_addr = self._session_get_sc_addr()
 
             if not self.sc_addr.is_valid():
@@ -997,8 +941,9 @@ class ScSession:
         return self._find_user_by_system_idtf("session::" + str(self.session_key))
 
     def _user_hash(self) -> str:
-        email = self.user.email
-        return hashlib.sha256(email.encode()).hexdigest()
+        if self.user_email:
+            return hashlib.sha256(self.user_email.encode()).hexdigest()
+        return ""
 
     def _user_new(self) -> ScAddr:
         return self._create_user_with_system_idtf("user::" + str(self._user_hash()))
