@@ -6,25 +6,25 @@ import hashlib
 import logging
 import time
 import uuid
-from typing import List, Dict
+from typing import Dict, List
 
 from fastapi import HTTPException
 from sc_client import client
 from sc_client.constants import sc_type
 from sc_client.models import (
-    ScTemplate,
-    ScIdtfResolveParams,
+    ScAddr,
     ScConstruction,
+    ScIdtfResolveParams,
     ScLinkContent,
     ScLinkContentType,
-    ScAddr,
+    ScTemplate,
     ScTemplateResult,
 )
 from sc_client.sc_keynodes import ScKeynodes
 
-from backend.app.core.decorators import method_logging, class_logging
-from backend.app.integrations.keynodes import KeynodeSysIdentifiers
 from backend.app.config import settings
+from backend.app.core.decorators import class_logging, method_logging
+from backend.app.integrations.keynodes import KeynodeSysIdentifiers
 
 __all__ = (
     "parse_menu_command",
@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────
 # SC-machine query functions
 # ─────────────────────────────────────────────
+
 
 @method_logging
 def parse_menu_command(cmd_addr: ScAddr):
@@ -418,8 +419,9 @@ def get_languages_list() -> List[ScAddr]:
 # Command execution
 # ─────────────────────────────────────────────
 
+
 @method_logging
-def do_command(cmd_addr: ScAddr, arguments: List[ScAddr]):
+def do_command(cmd_addr: ScAddr, arguments: List[ScAddr], session_key: str = None):
     result = {}
 
     if cmd_addr.is_valid():
@@ -511,7 +513,8 @@ def do_command(cmd_addr: ScAddr, arguments: List[ScAddr]):
             )[0]
             if not idx_addr.is_valid():
                 raise HTTPException(
-                    status_code=404, detail='Error while create "create_instance" command'
+                    status_code=404,
+                    detail='Error while create "create_instance" command',
                 )
             idx_arc_addr = "idx_arc_addr_%d" % idx
             construction.generate_connector(
@@ -568,7 +571,7 @@ def do_command(cmd_addr: ScAddr, arguments: List[ScAddr]):
 
         # @todo support all possible commands
 
-        sc_session = ScSession()
+        sc_session = ScSession(session_key=session_key)
         user_node = sc_session.get_sc_addr()
         if not user_node.is_valid():
             raise HTTPException(status_code=404, detail="Can't resolve user node")
@@ -728,6 +731,7 @@ def do_command(cmd_addr: ScAddr, arguments: List[ScAddr]):
 # Session management
 # ─────────────────────────────────────────────
 
+
 @class_logging
 class ScSession:
     def __init__(self, session_key: str = None, user_email: str = None):
@@ -772,7 +776,7 @@ class ScSession:
                 if self.session_key is None:
                     self.session_key = base64.b64encode(
                         uuid.uuid4().bytes + uuid.uuid4().bytes
-                    ).decode('utf-8')
+                    ).decode("utf-8")
                 self.sc_addr = self._session_get_sc_addr()
 
             if not self.sc_addr.is_valid():

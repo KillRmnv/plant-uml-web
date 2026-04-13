@@ -1,26 +1,26 @@
 """SC-web legacy API routes - compatibility with original sc-web frontend."""
+
 import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Request, Form, Response
-
+from fastapi import APIRouter, Form, Request, Response
 from sc_client import client
 from sc_client.constants import sc_type
 from sc_client.models import ScAddr, ScConstruction
 from sc_client.sc_keynodes import ScKeynodes
 
+from backend.app.config import settings
 from backend.app.integrations.keynodes import KeynodeSysIdentifiers
 from backend.app.integrations.sc_session import (
     ScSession,
     do_command,
     find_atomic_commands,
-    find_tooltip,
     find_result,
+    find_tooltip,
     find_translation_with_format,
     get_languages_list,
 )
-from backend.app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,9 @@ def _set_session_cookie(response: Response, session_key: str) -> None:
     )
 
 
-def _create_sc_session(request: Request, response: Optional[Response] = None) -> ScSession:
+def _create_sc_session(
+    request: Request, response: Optional[Response] = None
+) -> ScSession:
     """Create ScSession from request cookies, update cookie if new session created"""
     session_key = _get_session_key(request)
     sc_session = ScSession(session_key=session_key)
@@ -64,6 +66,7 @@ def _create_sc_session(request: Request, response: Optional[Response] = None) ->
 # ─────────────────────────────────────────────
 # Endpoints (paths match SCWeb.core.Server calls)
 # ─────────────────────────────────────────────
+
 
 @router.get("/context/")
 async def api_context():
@@ -94,7 +97,7 @@ async def api_cmd_do(request: Request, cmd: int = Form(...)):
         arguments.append(arg_addr)
         idx += 1
 
-    result = do_command(cmd_addr, arguments)
+    result = do_command(cmd_addr, arguments, session_key=_get_session_key(request))
 
     if result is not None:
         return result
@@ -110,7 +113,9 @@ async def api_languages():
 
 
 @router.post("/languages/set/")
-async def api_languages_set(request: Request, response: Response, lang_addr: int = Form(...)):
+async def api_languages_set(
+    request: Request, response: Response, lang_addr: int = Form(...)
+):
     """Set current language"""
     sc_session = _create_sc_session(request, response)
     sc_session.set_current_lang_mode(ScAddr(lang_addr))

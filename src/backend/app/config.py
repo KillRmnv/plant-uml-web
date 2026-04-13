@@ -2,21 +2,22 @@
 import os
 from os.path import abspath, dirname, join
 from pathlib import Path
-from pydantic import computed_field, Field, PostgresDsn
+
+from pydantic import Field, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = BASE_DIR.parent.parent
+PROJECT_ROOT = BASE_DIR.parent.parent.parent  # src/backend/app → project root
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
     # SC-Web paths
     sc_web_root: Path = Field(default=PROJECT_ROOT / "external" / "sc-web")
     database_url: PostgresDsn
+
     @computed_field
     @property
     def static_path(self) -> Path:
@@ -53,6 +54,7 @@ class Settings(BaseSettings):
 
     # CORS
     allowed_origins: str | list[str] = "*"
+
 
 settings = Settings()
 

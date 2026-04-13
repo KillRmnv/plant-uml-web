@@ -36,6 +36,12 @@ static/components/
 
 AGENTS.md
 TODO.md
+QWEN.md
+
+# Env
+.env
+.env.local
 
 external/
 secret.txt
+latex/

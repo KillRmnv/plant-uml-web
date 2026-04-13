@@ -2,45 +2,65 @@
 // API URL rewrite: /api/... → /api/v1/sc-web/...
 // Must run BEFORE SCWeb.core.Server._initialize()
 // ─────────────────────────────────────────────
-(function() {
-    var originalAjax = $.ajax;
-    var SC_WEB_PREFIX = '/api/v1/sc-web/';
-    var LEGACY_PREFIXES = ['api/context/', 'api/cmd/', 'api/languages/', 'api/info/', 'api/action/', 'api/user/', 'api/idtf/'];
+(function () {
+  var originalAjax = $.ajax;
+  var LEGACY_PREFIXES = [
+    "context/",
+    "cmd/",
+    "languages/",
+    "info/",
+    "action/",
+    "user/",
+    "idtf/",
+  ];
 
-    function rewriteUrl(url) {
-        if (!url) return url;
-        // Already versioned, no rewrite needed
-        if (url.indexOf('/api/v1/') !== -1) return url;
-        // Check if it's a legacy SC-web URL
-        for (var i = 0; i < LEGACY_PREFIXES.length; i++) {
-            if (url.indexOf(LEGACY_PREFIXES[i]) === 0 || url === LEGACY_PREFIXES[i].slice(0, -1)) {
-                // Replace 'api/' prefix with versioned one
-                var newPath = url.replace(/^api\//, 'api/v1/sc-web/');
-                console.log('[API Rewrite]', url, '→', newPath);
-                return newPath;
-            }
+  function rewriteUrl(url) {
+    if (!url) return url;
+    // Already versioned, no rewrite needed
+    if (url.indexOf("/api/v1/") !== -1 || url.indexOf("api/v1/") !== -1)
+      return url;
+    // Check if it's a legacy SC-web URL: /api/X or api/X
+    var match = url.match(/^\/?api\/(.+)/);
+    if (match) {
+      var rest = match[1]; // e.g. "user/" or "context/"
+      for (var i = 0; i < LEGACY_PREFIXES.length; i++) {
+        if (rest.indexOf(LEGACY_PREFIXES[i]) === 0) {
+          var newPath = "/api/v1/sc-web/" + rest;
+          console.log("[API Rewrite]", url, "→", newPath);
+          return newPath;
         }
-        return url;
+      }
     }
+    return url;
+  }
 
-    $.ajax = function(urlOrSettings, settings) {
-        if (typeof urlOrSettings === 'string') {
-            // $.ajax(url, settings) form
-            urlOrSettings = rewriteUrl(urlOrSettings);
-        } else if (urlOrSettings && typeof urlOrSettings === 'object' && urlOrSettings.url) {
-            // $.ajax(settings) form
-            urlOrSettings.url = rewriteUrl(urlOrSettings.url);
-        }
-        return originalAjax.call(this, urlOrSettings, settings);
-    };
+  $.ajax = function (urlOrSettings, settings) {
+    if (typeof urlOrSettings === "string") {
+      // $.ajax(url, settings) form
+      urlOrSettings = rewriteUrl(urlOrSettings);
+    } else if (
+      urlOrSettings &&
+      typeof urlOrSettings === "object" &&
+      urlOrSettings.url
+    ) {
+      // $.ajax(settings) form
+      urlOrSettings.url = rewriteUrl(urlOrSettings.url);
+    }
+    return originalAjax.call(this, urlOrSettings, settings);
+  };
 
-    console.log('[API Rewrite] Installed - SC-web URLs will be rewritten to /api/v1/sc-web/');
+  console.log(
+    "[API Rewrite] Installed - SC-web URLs will be rewritten to /api/v1/sc-web/",
+  );
 })();
 
 console.log("[Custom] ===== main.js НАЧАЛО ЗАГРУЗКИ =====");
 console.log("[Custom] SCWeb:", typeof SCWeb);
 console.log("[Custom] SCWeb.ui:", typeof SCWeb?.ui);
-console.log("[Custom] SCWeb.ui.WindowManager:", typeof SCWeb?.ui?.WindowManager);
+console.log(
+  "[Custom] SCWeb.ui.WindowManager:",
+  typeof SCWeb?.ui?.WindowManager,
+);
 console.log("[Custom] SCWeb.core:", typeof SCWeb?.core);
 console.log("[Custom] SCWeb.core.Main:", typeof SCWeb?.core?.Main);
 
@@ -50,40 +70,61 @@ console.log("[Custom] SCWeb.core.Main:", typeof SCWeb?.core?.Main);
 // Переопределение SCWeb.ui.WindowManager.appendHistoryItem
 // Добавляем логику выбора scg_code формата по умолчанию
 console.log("[Custom] Проверка условия для WindowManager.appendHistoryItem:");
-console.log("[Custom]   typeof SCWeb !== 'undefined':", typeof SCWeb !== "undefined");
+console.log(
+  "[Custom]   typeof SCWeb !== 'undefined':",
+  typeof SCWeb !== "undefined",
+);
 console.log("[Custom]   SCWeb.ui:", SCWeb?.ui);
 console.log("[Custom]   SCWeb.ui.WindowManager:", SCWeb?.ui?.WindowManager);
-console.log("[Custom]   SCWeb.ui.WindowManager.appendHistoryItem:", typeof SCWeb?.ui?.WindowManager?.appendHistoryItem);
+console.log(
+  "[Custom]   SCWeb.ui.WindowManager.appendHistoryItem:",
+  typeof SCWeb?.ui?.WindowManager?.appendHistoryItem,
+);
 
-if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.WindowManager && SCWeb.ui.WindowManager.appendHistoryItem) {
-  console.log("[Custom] ===== ПЕРЕОПРЕДЕЛЯЕМ WindowManager.appendHistoryItem =====");
-  
+if (
+  typeof SCWeb !== "undefined" &&
+  SCWeb.ui &&
+  SCWeb.ui.WindowManager &&
+  SCWeb.ui.WindowManager.appendHistoryItem
+) {
+  console.log(
+    "[Custom] ===== ПЕРЕОПРЕДЕЛЯЕМ WindowManager.appendHistoryItem =====",
+  );
+
   // Сохраняем оригинальную функцию
   var originalAppendHistoryItem = SCWeb.ui.WindowManager.appendHistoryItem;
   console.log("[Custom] Оригинальная функция:", originalAppendHistoryItem);
-  
+
   // Переопределяем
-  SCWeb.ui.WindowManager.appendHistoryItem = function(action_addr, command_state) {
+  SCWeb.ui.WindowManager.appendHistoryItem = function (
+    action_addr,
+    command_state,
+  ) {
     console.log("[Custom WM] ===== МОЁ ПЕРЕОПРЕДЕЛЕНИЕ ВЫЗВАНО =====");
     console.log("[Custom WM] appendHistoryItem вызван");
     console.log("[Custom WM] action_addr:", action_addr);
     console.log("[Custom WM] command_state до:", JSON.stringify(command_state));
     console.log("[Custom WM] viewMode:", SCWeb.core.Main.viewMode);
     console.log("[Custom WM] editMode:", SCWeb.core.Main.editMode);
-    
+
     // Если формат не установлен, проверяем режим
     if (!command_state.format) {
       // Всегда используем scg_code по умолчанию
       var useScgMode = true;
       console.log("[Custom WM] useScgMode:", useScgMode);
-      
+
       if (useScgMode) {
         // Ищем scg_code формат среди фабрик
         var factories = SCWeb.core.ComponentManager._factories_fmt;
         console.log("[Custom WM] Поиск scg_code среди фабрик...");
         for (var fmt in factories) {
-          console.log("[Custom WM] Формат:", fmt, "ext_lang:", factories[fmt].ext_lang);
-          if (factories[fmt].ext_lang === 'scg_code') {
+          console.log(
+            "[Custom WM] Формат:",
+            fmt,
+            "ext_lang:",
+            factories[fmt].ext_lang,
+          );
+          if (factories[fmt].ext_lang === "scg_code") {
             command_state.format = fmt;
             console.log("[Custom WM] Используем scg_code формат:", fmt);
             break;
@@ -91,7 +132,7 @@ if (typeof SCWeb !== "undefined" && SCWeb.ui && SCWeb.ui.WindowManager && SCWeb.
         }
       }
     }
-    
+
     console.log("[Custom WM] command_state после:", command_state);
     // Вызываем оригинальную функцию
     return originalAppendHistoryItem.call(this, action_addr, command_state);
@@ -209,9 +250,11 @@ SCWeb.core.Main = {
     console.log("[Custom] URL searchObject:", url.searchObject);
     console.log("[Custom] view_mode из URL:", url.searchObject.view_mode);
     console.log("[Custom] edit_mode из URL:", url.searchObject.edit_mode);
-    
+
     if (!url.searchObject.view_mode && !url.searchObject.edit_mode) {
-      console.log("[Custom] Режим не указан в URL, устанавливаем SCG по умолчанию");
+      console.log(
+        "[Custom] Режим не указан в URL, устанавливаем SCG по умолчанию",
+      );
       this.viewMode = 0; // DefaultSCgView
       this.editMode = 0; // SCgModeSelect
     } else {
@@ -224,7 +267,10 @@ SCWeb.core.Main = {
     SCWeb.core.Translation.fireLanguageChanged(this.user.current_lang);
 
     // Авто-открытие страницы включено
-    if (!url.searchObject || !SCWeb.core.Main.pageShowedForUrlParameters(url.searchObject)) {
+    if (
+      !url.searchObject ||
+      !SCWeb.core.Main.pageShowedForUrlParameters(url.searchObject)
+    ) {
       SCWeb.core.Main.showDefaultPage(params).then(null);
     }
 
@@ -385,7 +431,7 @@ SCWeb.core.Main = {
     console.log("[Custom] ===== showDefaultPage ВЫЗВАН =====");
     console.log("[Custom] viewMode перед showDefaultPage:", this.viewMode);
     console.log("[Custom] editMode перед showDefaultPage:", this.editMode);
-    
+
     function start(a) {
       console.log("[Custom] start() с адресом:", a);
       SCWeb.core.Main.doDefaultCommand([a]);
@@ -421,7 +467,7 @@ SCWeb.core.Main = {
     console.log("[Custom Main] cmd_args:", cmd_args);
     console.log("[Custom Main] viewMode:", this.viewMode);
     console.log("[Custom Main] editMode:", this.editMode);
-    
+
     SCWeb.core.Arguments.clear();
     SCWeb.core.Server.doCommand(cmd_addr, cmd_args, function (result) {
       console.log("[Custom Main] doCommand result:", result);
@@ -518,7 +564,7 @@ SCWeb.core.Main = {
     console.log("[Custom Main] default_cmd:", this.default_cmd);
     console.log("[Custom Main] viewMode:", this.viewMode);
     console.log("[Custom Main] editMode:", this.editMode);
-    
+
     if (!this.default_cmd) {
       const self = this;
       SCWeb.core.Server.resolveScAddr([this.default_cmd_str]).then(

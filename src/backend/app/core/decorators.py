@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
-from fastapi import HTTPException
 from functools import wraps
-from typing import TypeVar, Callable
+from typing import Callable, TypeVar
+
+from fastapi import HTTPException
 
 
 def requestAdmin(method):
@@ -15,21 +16,27 @@ def requestAdmin(method):
     return wrapper
 
 
-RT = TypeVar('RT')
+RT = TypeVar("RT")
 
 
 def method_logging(func: Callable[..., RT]) -> Callable[..., RT]:
     @wraps(func)
-    def wrapper(*argv):
-        logging.debug("- %s" % "call method " + func.__code__.co_name + " in: " +
-                      func.__code__.co_filename + " line: " + str(func.__code__.co_firstlineno))
-        return func(*argv)
+    def wrapper(*args, **kwargs):
+        logging.debug(
+            "- %s" % "call method "
+            + func.__code__.co_name
+            + " in: "
+            + func.__code__.co_filename
+            + " line: "
+            + str(func.__code__.co_firstlineno)
+        )
+        return func(*args, **kwargs)
 
     return wrapper
 
 
 def class_logging(cls):
     for name, method in cls.__dict__.items():
-        if not name.startswith('_') and not type(method) is int:
+        if not name.startswith("_") and not type(method) is int:
             setattr(cls, name, method_logging(method))
     return cls
