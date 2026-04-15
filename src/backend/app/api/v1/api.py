@@ -7,8 +7,10 @@ router = APIRouter(prefix="/api/v1")
 from backend.app.api.v1.routes.sc_web import router as sc_web_router
 router.include_router(sc_web_router, prefix="/sc-web", tags=["sc-web"])
 
-# User management
-# from backend.app.api.v1.routes.users import router as users_router
-# router.include_router(users_router, prefix="/users", tags=["users"])
+from backend.app.api.v1.routes.users import router as users_router
+router.include_router(users_router, prefix="/users", tags=["users"])
+
+from backend.app.api.v1.routes.auth import router as auth_router
+router.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 

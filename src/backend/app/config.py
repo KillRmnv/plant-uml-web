@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     # CORS
     allowed_origins: str | list[str] = "*"
 
+    # JWT Settings
+    secret_key: str
+    jwt_algorithm: str = "HS256"
+    access_token_expires: bool = False
 
 settings = Settings()
 
