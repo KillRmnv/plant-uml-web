@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, JSON, Integer
+from sqlalchemy import String, JSONB, Integer
 from backend.app.db.database import Base
 
 class User(Base):

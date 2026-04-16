@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, Literal
 
 class UserBase(BaseModel):
     login: str = Field(..., min_length=3, max_length=20)
@@ -10,3 +10,7 @@ class UserResponse(UserBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserApiKeysUpdate(BaseModel):
+    provider: Literal["openai", "anthropic", "mistral"]
+    api_key: str = Field(..., min_length=10)

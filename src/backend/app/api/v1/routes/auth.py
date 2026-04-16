@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.core.security import verify_password, create_access_token
-from app.domains.users.crud import get_user_by_login
+from app.domains.users import services
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -14,7 +14,7 @@ async def login_for_access_token(
         db: AsyncSession = Depends(get_db)
 ):
     # 1. Ищем пользователя по логину
-    user = await get_user_by_login(db, login=form_data.username)
+    user = await services.authenticate_user(db, login=form_data.username, password=form_data.password)
 
     # 2. Проверяем пароль (сравниваем чистый пароль из формы с хешем из БД)
     if not user or not verify_password(form_data.password, user.password):

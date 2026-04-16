@@ -16,29 +16,22 @@ async def consult_diagram(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)
 ):
-    try:
-        # Вся оркестрация делегирована сервисному слою
-        chat_id, response_generator = await services.process_chat_consultation(
-            db=db,
-            user=current_user,
-            provider=request.provider,
-            message_text=request.message,
-            diagram_code=request.diagram_code,
-            chat_id=request.chat_id
-        )
 
-        # Роутер занимается только HTTP-специфичными вещами
-        headers = {"X-Chat-ID": str(chat_id)}
+    # Вся оркестрация делегирована сервисному слою
+    chat_id, response_generator = await services.process_chat_consultation(
+        db=db,
+        user=current_user,
+        provider=request.provider,
+        message_text=request.message,
+        diagram_code=request.diagram_code,
+        chat_id=request.chat_id
+    )
 
-        return StreamingResponse(
-            response_generator,
-            media_type="text/event-stream",
-            headers=headers
-        )
+    # Роутер занимается только HTTP-специфичными вещами
+    headers = {"X-Chat-ID": str(chat_id)}
 
-    except ValueError as e:
-        # Сервис выкинул ошибку бизнес-логики -> переводим в 400 HTTP статус
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+    return StreamingResponse(
+        response_generator,
+        media_type="text/event-stream",
+        headers=headers
+    )

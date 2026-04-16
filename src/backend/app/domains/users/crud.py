@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 import logging
 
 from app.domains.users.models import User
-from app.core.exceptions import UserAlreadyExistsError
+from app.domains.users.exceptions import UserAlreadyExistsError
 
 logger = logging.getLogger(__name__)
 
