@@ -9,17 +9,66 @@ class SettingsModal {
         this.providers = [];
         this.models = [];
         this.settings = {};
+        this.apiClient = null;
         this.init();
     }
 
-    init() {
-        this.loadSettings();
+    setApiClient(apiClient) {
+        this.apiClient = apiClient;
+    }
+
+    getSettingsStorageKey() {
+        const userId = this.apiClient?.currentUser?.id || 'anonymous';
+        return `${Config.STORAGE_KEYS.SETTINGS}_${userId}`;
+    }
+
+    clearLegacySettingsStorage() {
+        try {
+            localStorage.removeItem(Config.STORAGE_KEYS.SETTINGS);
+        } catch (e) {
+            console.warn('[SettingsModal] Failed to clear legacy settings cache:', e);
+        }
+    }
+
+    async init() {
+        await this.loadSettingsFromApi();
         this.render();
     }
 
-    loadSettings() {
+    async loadSettingsFromApi() {
+        if (!this.apiClient) {
+            console.warn('[SettingsModal] API client not set, using localStorage');
+            this.loadSettingsLocal();
+            return;
+        }
+
         try {
-            const saved = localStorage.getItem(Config.STORAGE_KEYS.SETTINGS);
+            try {
+                this.providers = await this.apiClient.getProviders();
+            } catch (providerError) {
+                console.warn('[SettingsModal] Failed to load providers from API:', providerError);
+                this.providers = [];
+            }
+
+            const settings = await this.apiClient.getSettings();
+            this.settings = {
+                provider: settings.provider || '',
+                model: settings.model || '',
+                autoSave: settings.auto_save !== false,
+                apiKey: settings.api_keys?.[settings.provider] || '',
+                api_keys: settings.api_keys || {}
+            };
+            this.clearLegacySettingsStorage();
+            console.log('[SettingsModal] Settings loaded from API:', this.settings);
+        } catch (e) {
+            console.warn('[SettingsModal] Failed to load settings from API:', e);
+            this.loadSettingsLocal();
+        }
+    }
+
+    loadSettingsLocal() {
+        try {
+            const saved = localStorage.getItem(this.getSettingsStorageKey());
             if (saved) {
                 this.settings = JSON.parse(saved);
             }
@@ -28,9 +77,43 @@ class SettingsModal {
         }
     }
 
-    saveSettings() {
+    async saveSettingsToApi() {
+        if (!this.apiClient) {
+            console.warn('[SettingsModal] API client not set, using localStorage');
+            this.saveSettingsLocal();
+            return;
+        }
+
         try {
-            localStorage.setItem(Config.STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
+            const apiKeys = { ...(this.settings.api_keys || {}) };
+            if (this.settings.provider) {
+                if (this.settings.apiKey) {
+                    apiKeys[this.settings.provider] = this.settings.apiKey;
+                } else {
+                    delete apiKeys[this.settings.provider];
+                }
+            }
+
+            await this.apiClient.saveSettings({
+                provider: this.settings.provider || null,
+                model: this.settings.model || null,
+                auto_save: this.settings.autoSave,
+                api_keys: Object.keys(apiKeys).length > 0 ? apiKeys : null
+            });
+            console.log('[SettingsModal] Settings saved to API');
+
+            // Also save to localStorage as backup
+            this.saveSettingsLocal();
+        } catch (e) {
+            console.warn('[SettingsModal] Failed to save settings to API:', e);
+            this.saveSettingsLocal();
+        }
+    }
+
+    saveSettingsLocal() {
+        try {
+            localStorage.setItem(this.getSettingsStorageKey(), JSON.stringify(this.settings));
+            this.clearLegacySettingsStorage();
         } catch (e) {
             console.warn('[SettingsModal] Failed to save settings:', e);
         }
@@ -145,6 +228,8 @@ class SettingsModal {
         const providerSelect = this.modalContainer.querySelector('#provider-select');
         providerSelect.addEventListener('change', () => {
             this.settings.provider = providerSelect.value;
+            this.settings.apiKey = this.settings.api_keys?.[this.settings.provider] || '';
+            this.modalContainer.querySelector('#api-key').value = this.settings.apiKey;
             this.updateModelSelect();
         });
         
@@ -156,6 +241,13 @@ class SettingsModal {
         const apiKeyInput = this.modalContainer.querySelector('#api-key');
         apiKeyInput.addEventListener('input', () => {
             this.settings.apiKey = apiKeyInput.value;
+            // Обновляем api_keys для активного провайдера
+            if (this.settings.provider) {
+                if (!this.settings.api_keys) {
+                    this.settings.api_keys = {};
+                }
+                this.settings.api_keys[this.settings.provider] = apiKeyInput.value;
+            }
         });
         
         const apiKeyToggle = this.modalContainer.querySelector('.api-key-toggle');
@@ -174,77 +266,143 @@ class SettingsModal {
 
     populateProviders() {
         const providerSelect = this.modalContainer.querySelector('#provider-select');
-        
-        const mockProviders = [
-            { id: 'ollama', name: 'Ollama' },
-            { id: 'lmstudio', name: 'LM Studio' },
+
+        // Default providers (will be updated from API if available)
+        const defaultProviders = [
             { id: 'openai', name: 'OpenAI' },
             { id: 'anthropic', name: 'Anthropic' },
+            { id: 'mistral', name: 'Mistral' },
+            { id: 'openrouter', name: 'OpenRouter' },
+            { id: 'localai', name: 'LocalAI' },
         ];
-        
+
         providerSelect.innerHTML = '<option value="">Select a provider...</option>';
-        
-        mockProviders.forEach(provider => {
-            const option = document.createElement('option');
-            option.value = provider.id;
-            option.textContent = provider.name;
-            if (this.settings.provider === provider.id) {
-                option.selected = true;
-            }
-            providerSelect.appendChild(option);
-        });
-        
+
+        // Populate from API if available
+        if (this.apiClient && this.providers.length > 0) {
+            this.providers.forEach(provider => {
+                const option = document.createElement('option');
+                option.value = provider.id;
+                option.textContent = provider.name;
+                if (this.settings.provider === provider.id) {
+                    option.selected = true;
+                }
+                providerSelect.appendChild(option);
+            });
+        } else {
+            defaultProviders.forEach(provider => {
+                const option = document.createElement('option');
+                option.value = provider.id;
+                option.textContent = provider.name;
+                if (this.settings.provider === provider.id) {
+                    option.selected = true;
+                }
+                providerSelect.appendChild(option);
+            });
+        }
+
         if (this.settings.provider) {
             this.updateModelSelect();
         }
-        
+
         if (this.settings.apiKey) {
             this.modalContainer.querySelector('#api-key').value = this.settings.apiKey;
         }
-        
+
         this.modalContainer.querySelector('#auto-save').checked = this.settings.autoSave !== false;
     }
 
-    updateModelSelect() {
+    async updateModelSelect() {
         const modelSelect = this.modalContainer.querySelector('#model-select');
         const provider = this.modalContainer.querySelector('#provider-select').value;
-        
-        const models = {
-            ollama: ['llama2', 'mistral', 'codellama', 'neural-chat'],
-            lmstudio: ['llama2', 'mistral', 'codellama'],
-            openai: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'],
-            anthropic: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-        };
-        
-        modelSelect.innerHTML = '<option value="">Select a model...</option>';
-        
-        if (provider && models[provider]) {
-            modelSelect.disabled = false;
-            
-            models[provider].forEach(model => {
-                const option = document.createElement('option');
-                option.value = model;
-                option.textContent = model;
-                if (this.settings.model === model) {
-                    option.selected = true;
-                }
-                modelSelect.appendChild(option);
-            });
-        } else {
-            modelSelect.disabled = true;
+
+        modelSelect.innerHTML = '<option value="">Loading models...</option>';
+        modelSelect.disabled = true;
+
+        if (!provider) {
+            modelSelect.innerHTML = '<option value="">Select a model...</option>';
+            return;
         }
+
+        // Check if API key exists for this provider
+        const apiKey = this.settings.api_keys?.[provider];
+        if (!apiKey) {
+            modelSelect.innerHTML = '<option value="">Добавьте API ключ для выбора модели</option>';
+            modelSelect.disabled = true;
+            return;
+        }
+
+        // Try to get models from API
+        if (this.apiClient) {
+            try {
+                console.log('[SettingsModal] Requesting models for provider:', provider);
+                const response = await this.apiClient.getModels(provider);
+                console.log('[SettingsModal] Raw response:', response);
+                console.log('[SettingsModal] Response type:', typeof response);
+                console.log('[SettingsModal] Response keys:', response ? Object.keys(response) : 'null');
+
+                // Handle new response format with detail and models
+                const models = response.models || response;
+                const detail = response.detail;
+
+                console.log('[SettingsModal] Parsed models:', models);
+                console.log('[SettingsModal] Parsed model count:', models?.length);
+                console.log('[SettingsModal] Parsed detail:', detail);
+
+                if (detail && (!models || models.length === 0)) {
+                    // API вернуло сообщение об ошибке
+                    console.log('[SettingsModal] API returned detail:', detail);
+                    modelSelect.innerHTML = `<option value="">${detail}</option>`;
+                    modelSelect.disabled = true;
+                    return;
+                }
+
+                this.models = models;
+
+                modelSelect.innerHTML = '<option value="">Select a model...</option>';
+
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name || model.id;
+                    if (this.settings.model === model.id) {
+                        option.selected = true;
+                    }
+                    modelSelect.appendChild(option);
+                });
+
+                modelSelect.disabled = false;
+                return;
+            } catch (e) {
+                console.warn('[SettingsModal] Failed to load models from API:', e);
+                modelSelect.innerHTML = '<option value="">Ошибка загрузки моделей</option>';
+                modelSelect.disabled = true;
+                return;
+            }
+        }
+
+        // No API client - show message
+        modelSelect.innerHTML = '<option value="">API недоступен</option>';
+        modelSelect.disabled = true;
     }
 
     show() {
         this.modalContainer.querySelector('#settings-overlay').classList.add('active');
+        // Reload settings when showing modal
+        this.loadSettingsFromApi().then(() => this.populateProviders());
     }
 
     hide() {
         this.modalContainer.querySelector('#settings-overlay').classList.remove('active');
     }
 
-    save() {
-        this.saveSettings();
+    async save() {
+        await this.saveSettingsToApi();
+
+        // После сохранения - перезагрузить настройки и обновить модели
+        await this.loadSettingsFromApi();
+        await this.updateModelSelect();
+
         this.options.onSave?.(this.settings);
         this.hide();
     }

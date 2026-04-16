@@ -8,19 +8,26 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# Add project root to path - must be first
+# From alembic/env.py -> src/backend/alembic -> src/backend -> src (project root for PYTHONPATH=src)
+PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
+sys.path.insert(0, PROJECT_ROOT)
 
-# TODO: fix imports
-from app.core.config import settings
-from app.db.database import Base
+# Set env file path BEFORE importing settings (go up to project root)
+ENV_FILE = os.path.join(PROJECT_ROOT, "..", "..", ".env")
+if os.path.exists(ENV_FILE):
+    os.environ["ENV_FILE"] = ENV_FILE
 
-from app.domains.users.models import *
+from backend.app.config import settings
+from backend.app.db.database import Base
+
+from backend.app.domains.users.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", str(settings.database_url))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

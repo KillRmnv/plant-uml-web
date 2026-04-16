@@ -142,7 +142,6 @@ class ChatWindow {
         this.sendBtn.disabled = true;
         
         this.options.onMessage?.(content, isFirst, this.currentMode);
-        
         this.showTyping();
     }
 
@@ -198,6 +197,21 @@ class ChatWindow {
             typing.remove();
         }
         this.isTyping = false;
+    }
+
+    updateLastAssistantMessage(content) {
+        this.hideTyping();
+        const lastMessage = this.messagesContainer.querySelector('.message.assistant:last-child');
+        if (lastMessage) {
+            const contentEl = lastMessage.querySelector('.message-content p');
+            if (contentEl) {
+                contentEl.textContent = content;
+            }
+        } else {
+            // Создать новое сообщение если нет
+            this.addMessage('assistant', content);
+        }
+        this.scrollToBottom();
     }
 
     addAssistantMessage(content) {

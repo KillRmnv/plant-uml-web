@@ -428,7 +428,7 @@ class ApiClient {
    * @returns {Promise<Array<{id: string, title: string, preview: string, created_at: string}>>}
    */
   async getChats() {
-    return this.get("/assistant/chats");
+    return this.get("/chat/chats");
   }
 
   /**
@@ -437,7 +437,7 @@ class ApiClient {
    * @returns {Promise<{id: string, title: string, created_at: string}>}
    */
   async createChat(title) {
-    return this.post("/assistant/chats", { title });
+    return this.post("/chat/chats", { title });
   }
 
   /**
@@ -446,22 +446,88 @@ class ApiClient {
    * @returns {Promise<Array<{role: string, content: string, timestamp: string}>>}
    */
   async getChatMessages(chatId) {
-    return this.get(`/assistant/chats/${chatId}/messages`);
+    return this.get(`/chat/chats/${chatId}/messages`);
   }
 
-  /**
-   * Отправить сообщение в чат
+/**
+   * Отправить сообщение в чат и получить streaming ответ от LLM
    * @param {string} chatId - ID чата
    * @param {string} message - Текст сообщения
    * @param {string} mode - Режим (assistant/analyst)
-   * @returns {Promise<{message: string, chat_id: string, response: string}>}
+   * @param {Object} options - Дополнительные параметры (provider, diagram_code)
+   * @returns {Promise<Response>} - SSE поток
    */
-  async sendMessage(chatId, message, mode = "assistant") {
-    return this.post("/assistant/chat", {
-      chat_id: chatId,
+  async sendMessage(chatId, message, mode = "assistant", options = {}) {
+    const { provider = 'openrouter', model = null, diagram_code = '' } = options;
+
+    const url = `${this.baseUrl}/chat/consult`;
+
+    const data = {
+      provider,
+      model,
       message,
-      mode,
+      diagram_code,
+      chat_id: chatId,
+    };
+
+    // Используем fetch напрямую для streaming
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.accessToken}`,
+      },
+      body: JSON.stringify(data),
     });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('[ApiClient] sendMessage error:', response.status, error);
+      throw new Error(error || `HTTP ${response.status}`);
+    }
+
+    return response;
+  }
+
+  /**
+   * POST with custom body (for streaming)
+   * @private
+   */
+  async postWithBody(endpoint, data, allowStreaming = false) {
+    const url = `${this.baseUrl}${endpoint}`;
+
+    if (this.accessToken) {
+      // Загружаем настройки для получения API ключа
+      let apiKey = null;
+      try {
+        const settings = await this.getSettings();
+        apiKey = settings.api_keys?.[settings.provider];
+      } catch (e) {
+        console.warn('[ApiClient] Failed to get settings for API key:', e);
+      }
+
+      const config = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.accessToken}`,
+        },
+        body: JSON.stringify(data),
+      };
+
+      console.log('[ApiClient] Sending to endpoint:', endpoint, 'data:', data);
+
+      const response = await fetch(url, config);
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || `HTTP ${response.status}`);
+      }
+
+      return response;
+    }
+
+    throw new Error("No access token");
   }
 
   /**
@@ -470,7 +536,7 @@ class ApiClient {
    * @returns {Promise<{success: boolean}>}
    */
   async deleteChat(chatId) {
-    return this.delete(`/assistant/chats/${chatId}`);
+    return this.delete(`/chat/chats/${chatId}`);
   }
 
   /**
@@ -480,7 +546,7 @@ class ApiClient {
    * @returns {Promise<{success: boolean}>}
    */
   async updateChatTitle(chatId, title) {
-    return this.put(`/assistant/chats/${chatId}`, { title });
+    return this.put(`/chat/chats/${chatId}`, { title });
   }
 
   /**
@@ -490,7 +556,7 @@ class ApiClient {
    * @returns {Promise<Blob>}
    */
   async exportChat(chatId, format = "txt") {
-    return this.get(`/assistant/chats/${chatId}/export?format=${format}`);
+    return this.get(`/chat/chats/${chatId}/export?format=${format}`);
   }
 
   /**

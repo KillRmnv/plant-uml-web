@@ -123,14 +123,36 @@ class App {
 
   initAssistant() {
     const assistantContainer = this.panelSystem.getPanelContent("assistant");
-    this.assistantPanel = new AssistantPanel(assistantContainer);
+    this.assistantPanel = new AssistantPanel(assistantContainer, {
+      apiClient: this.apiClient,
+      authManager: this.authManager,
+    });
   }
 
   initSettings() {
+    // Guests cannot access settings - block access
+    if (this.authManager?.isGuestMode()) {
+      console.log("[App] Guest mode - settings blocked");
+      // Disable settings button for guests
+      const btnSettings = document.getElementById("btn-settings");
+      if (btnSettings) {
+        btnSettings.disabled = true;
+        btnSettings.title = "Доступно после входа";
+        btnSettings.style.opacity = "0.5";
+        btnSettings.style.pointerEvents = "none";
+      }
+      return;
+    }
+
+    // Only authenticated users can access settings
     const modalContainer = document.getElementById("modal-container");
     this.settingsModal = new SettingsModal(modalContainer, {
       onSave: (settings) => this.onSettingsSave(settings),
     });
+    // Connect API client to settings modal
+    if (this.apiClient) {
+      this.settingsModal.setApiClient(this.apiClient);
+    }
   }
 
   initSession() {

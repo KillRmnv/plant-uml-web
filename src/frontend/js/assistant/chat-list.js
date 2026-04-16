@@ -6,23 +6,66 @@ class ChatList {
     constructor(container, options = {}) {
         this.container = container;
         this.options = options;
+        this.apiClient = options.apiClient || window.apiClient;
+        this.authManager = options.authManager || window.authManager;
         this.chats = [];
         this.currentChatId = null;
         this.init();
     }
 
-    init() {
-        this.loadFromStorage();
+    async init() {
+        await this.loadChats();
         this.render();
+    }
+
+    get isAuthenticated() {
+        return Boolean(this.apiClient?.isAuthenticated?.());
+    }
+
+    get storage() {
+        return sessionStorage;
+    }
+
+    get chatsStorageKey() {
+        return `${Config.STORAGE_KEYS.CHATS}_guest`;
+    }
+
+    get currentChatStorageKey() {
+        return `${Config.STORAGE_KEYS.CURRENT_CHAT}_guest`;
+    }
+
+    async loadChats() {
+        if (this.isAuthenticated && this.apiClient) {
+            await this.loadFromApi();
+            return;
+        }
+        this.loadFromStorage();
+    }
+
+    async loadFromApi() {
+        try {
+            const chats = await this.apiClient.getChats();
+            this.chats = chats.map((chat) => ({
+                ...chat,
+                id: String(chat.id),
+                messages: [],
+                preview: chat.preview || '',
+            }));
+            this.currentChatId = this.chats[0]?.id || null;
+        } catch (e) {
+            console.warn('[ChatList] Failed to load chats from API:', e);
+            this.chats = [];
+            this.currentChatId = null;
+        }
     }
 
     loadFromStorage() {
         try {
-            const saved = localStorage.getItem(Config.STORAGE_KEYS.CHATS);
+            const saved = this.storage.getItem(this.chatsStorageKey);
             if (saved) {
                 this.chats = JSON.parse(saved);
             }
-            const currentChat = localStorage.getItem(Config.STORAGE_KEYS.CURRENT_CHAT);
+            const currentChat = this.storage.getItem(this.currentChatStorageKey);
             if (currentChat) {
                 this.currentChatId = currentChat;
             }
@@ -33,9 +76,9 @@ class ChatList {
 
     saveToStorage() {
         try {
-            localStorage.setItem(Config.STORAGE_KEYS.CHATS, JSON.stringify(this.chats));
+            this.storage.setItem(this.chatsStorageKey, JSON.stringify(this.chats));
             if (this.currentChatId) {
-                localStorage.setItem(Config.STORAGE_KEYS.CURRENT_CHAT, this.currentChatId);
+                this.storage.setItem(this.currentChatStorageKey, this.currentChatId);
             }
         } catch (e) {
             console.warn('[ChatList] Failed to save chats:', e);
@@ -89,7 +132,7 @@ class ChatList {
     bindEvents() {
         const newChatBtn = this.container.querySelector('[data-action="new-chat"]');
         if (newChatBtn) {
-            newChatBtn.addEventListener('click', () => this.createNewChat());
+            newChatBtn.addEventListener('click', () => void this.createNewChat());
         }
         
         const chatItems = this.container.querySelectorAll('.chat-item');
@@ -106,13 +149,35 @@ class ChatList {
                 deleteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const chatId = item.dataset.chatId;
-                    this.deleteChat(chatId);
+                    void this.deleteChat(chatId);
                 });
             }
         });
     }
 
-    createNewChat(title = 'New Chat') {
+    async createNewChat(title = 'New Chat') {
+        if (this.isAuthenticated && this.apiClient) {
+            try {
+                const chat = await this.apiClient.createChat(title);
+                const normalizedChat = {
+                    ...chat,
+                    id: String(chat.id),
+                    preview: chat.preview || '',
+                    messages: [],
+                };
+
+                this.chats.unshift(normalizedChat);
+                this.selectChat(normalizedChat.id);
+                this.render();
+
+                this.options.onChatCreated?.(normalizedChat);
+                return normalizedChat;
+            } catch (e) {
+                console.error('[ChatList] Failed to create chat via API:', e);
+                return null;
+            }
+        }
+
         const chat = {
             id: Date.now().toString(),
             title: title,
@@ -132,12 +197,23 @@ class ChatList {
 
     selectChat(chatId) {
         this.currentChatId = chatId;
-        this.saveToStorage();
+        if (!this.isAuthenticated) {
+            this.saveToStorage();
+        }
         this.render();
         this.options.onChatSelected?.(chatId);
     }
 
-    deleteChat(chatId) {
+    async deleteChat(chatId) {
+        if (this.isAuthenticated && this.apiClient) {
+            try {
+                await this.apiClient.deleteChat(chatId);
+            } catch (e) {
+                console.error('[ChatList] Failed to delete chat via API:', e);
+                return;
+            }
+        }
+
         this.chats = this.chats.filter(c => c.id !== chatId);
         
         if (this.currentChatId === chatId) {
@@ -155,8 +231,11 @@ class ChatList {
     }
 
     addMessage(chatId, message, isFirst = false) {
-        const chat = this.chats.find(c => c.id === chatId);
+        const chat = this.chats.find(c => String(c.id) === String(chatId));
         if (chat) {
+            if (!Array.isArray(chat.messages)) {
+                chat.messages = [];
+            }
             chat.messages.push(message);
             chat.preview = message.content.substring(0, 50);
             
@@ -164,9 +243,32 @@ class ChatList {
                 chat.title = this.extractTitle(message.content);
             }
             
-            this.saveToStorage();
+            if (!this.isAuthenticated) {
+                this.saveToStorage();
+            }
             this.render();
         }
+    }
+
+    replaceChatId(oldChatId, newChatId) {
+        if (!oldChatId || !newChatId || oldChatId === newChatId) {
+            return;
+        }
+
+        const chat = this.chats.find(c => c.id === oldChatId);
+        if (!chat) {
+            return;
+        }
+
+        chat.id = String(newChatId);
+        if (this.currentChatId === oldChatId) {
+            this.currentChatId = String(newChatId);
+        }
+
+        if (!this.isAuthenticated) {
+            this.saveToStorage();
+        }
+        this.render();
     }
     
     extractTitle(text) {

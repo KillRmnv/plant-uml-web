@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expires: bool = False
+    access_token_expire_minutes: int = 30
+
 
 settings = Settings()
 

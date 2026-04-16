@@ -3,7 +3,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -45,12 +45,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.middleware("http")
+async def redirect_api_v1(request: Request, call_next):
+    """Redirect /api/v1/* to /api/* for backward compatibility."""
+    path = request.url.path
+    if path.startswith("/api/v1"):
+        new_path = path.replace("/api/v1", "/api", 1)
+        request.scope["path"] = new_path
+        request.scope["raw_path"] = new_path.encode()
+    return await call_next(request)
+
+
 setup_exception_handlers(app)
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.allowed_origins == "*" else settings.allowed_origins.split(","),
+    allow_origins=["*"]
+    if settings.allowed_origins == "*"
+    else settings.allowed_origins.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,6 +77,7 @@ app.include_router(api_v1_router)
 # ─────────────────────────────────────────────
 # Frontend pages (must be before static mount)
 # ─────────────────────────────────────────────
+
 
 @app.get("/", response_class=HTMLResponse)
 async def main_page():
