@@ -12,6 +12,8 @@ from backend.app.config import settings
 from backend.app.integrations.deps import init_sc_client, disconnect
 from backend.app.api.v1.api import router as api_v1_router
 
+from backend.app.core.exception_handlers import setup_exception_handlers
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+setup_exception_handlers(app)
 
 # CORS
 app.add_middleware(
