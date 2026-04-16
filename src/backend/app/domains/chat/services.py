@@ -6,6 +6,7 @@ from app.domains.chat import crud
 from app.domains.chat.models import Message
 from app.domains.users.models import User
 from app.integrations.llm.client import generate_and_save_response
+from app.domains.chat.exceptions import APIKeyNotConfiguredError
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ async def process_chat_consultation(
     # 1. Проверка бизнес-правила: есть ли ключ?
     api_key = user.api_keys.get(provider)
     if not api_key:
-        raise ValueError(f"API ключ для провайдера '{provider}' не настроен.")
+        raise APIKeyNotConfiguredError(provider=provider)
 
     # 2. Работа с БД (создание чата и сохранение вопроса)
     chat = await crud.get_or_create_chat(db, user.id, chat_id)

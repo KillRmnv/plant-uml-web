@@ -3,9 +3,6 @@ import logging
 
 from app.domains.users import crud, schemas
 from app.domains.users.models import User
-from app.core.security import get_password_hash
-from app.domains.users.exceptions import UserNotFoundError
-
 from app.core.security import get_password_hash, verify_password
 from app.domains.users.exceptions import UserNotFoundError, InvalidCredentialsError
 
