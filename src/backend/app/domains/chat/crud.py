@@ -4,7 +4,7 @@ from app.domains.chat.models import Chat, Message
 from app.domains.chat.exceptions import ChatAccessDeniedError
 
 
-async def get_or_create_chat(db, user_id, chat_id=None):
+async def get_or_create_chat(db: AsyncSession, user_id: int, chat_id: int | None = None) -> Chat:
     if chat_id:
         stmt = select(Chat).where(Chat.id == chat_id, Chat.user_id == user_id)
         result = await db.execute(stmt)
