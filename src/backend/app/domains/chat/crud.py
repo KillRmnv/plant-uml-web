@@ -1,18 +1,24 @@
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.domains.chat.models import Chat, Message
+from app.domains.chat.exceptions import ChatAccessDeniedError
 
 
-async def get_or_create_chat(db: AsyncSession, user_id: int, chat_id: int | None = None) -> Chat:
-    """Возвращает существующий чат или создает новый."""
+async def get_or_create_chat(db, user_id, chat_id=None):
     if chat_id:
         stmt = select(Chat).where(Chat.id == chat_id, Chat.user_id == user_id)
         result = await db.execute(stmt)
         chat = result.scalar_one_or_none()
         if chat:
             return chat
+        # Чат существует, но не принадлежит пользователю
+        # Проверяем: чат вообще существует?
+        exists_stmt = select(Chat).where(Chat.id == chat_id)
+        exists = await db.execute(exists_stmt)
+        if exists.scalar_one_or_none():
+            raise ChatAccessDeniedError(chat_id)  # чужой чат
+        # Если чата нет вообще — создаём новый (молчаливо)
 
-    # Если chat_id не передан или чужой - создаем новый
     new_chat = Chat(user_id=user_id)
     db.add(new_chat)
     await db.commit()

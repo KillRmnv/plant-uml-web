@@ -33,7 +33,7 @@ async def process_chat_consultation(
         tuple[int, AsyncGenerator]: ID чата и генератор потока ответа LLM.
 
     Raises:
-        ValueError: Если у пользователя нет API ключа.
+        APIKeyNotConfiguredError: Если у пользователя нет API ключа для провайдера.
     """
     # 1. Проверка бизнес-правила: есть ли ключ?
     api_key = user.api_keys.get(provider)
