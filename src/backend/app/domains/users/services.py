@@ -6,6 +6,9 @@ from app.domains.users.models import User
 from app.core.security import get_password_hash
 from app.domains.users.exceptions import UserNotFoundError
 
+from app.core.security import get_password_hash, verify_password
+from app.domains.users.exceptions import UserNotFoundError, InvalidCredentialsError
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,6 +36,6 @@ async def get_user_profile(db: AsyncSession, user_id: int) -> User:
 
 async def authenticate_user(db: AsyncSession, login: str, password: str) -> User:
     user = await crud.get_user_by_login(db, login)
-        if not user or not verify_password(password, user.password):
-        raise InvalidCredentialsError()  # добавить в users/exceptions.py
+    if not user or not verify_password(password, user.password):
+        raise InvalidCredentialsError()
     return user

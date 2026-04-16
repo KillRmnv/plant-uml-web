@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, ConfigDict, Literal
+from typing import Literal
+from pydantic import BaseModel, Field, ConfigDict
 
 class UserBase(BaseModel):
     login: str = Field(..., min_length=3, max_length=20)

@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 # Импортируем наши доменные ошибки
-from app.domains.users.exceptions import UserAlreadyExistsError, UserNotFoundError
+from app.domains.users.exceptions import UserAlreadyExistsError, UserNotFoundError, InvalidCredentialsError
 from app.domains.chat.exceptions import APIKeyNotConfiguredError, ChatAccessDeniedError, LLMProviderError
 
 def setup_exception_handlers(app: FastAPI) -> None:
@@ -14,6 +14,14 @@ def setup_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"detail": exc.message}
+        )
+
+    @app.exception_handler(InvalidCredentialsError)
+    async def invalid_credentials_handler(request: Request, exc: InvalidCredentialsError):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": exc.message},
+            headers={"WWW-Authenticate": "Bearer"}
         )
 
     @app.exception_handler(UserNotFoundError)
