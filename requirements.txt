@@ -4,6 +4,8 @@ uvicorn[standard]>=0.27.0
 python-multipart>=0.0.6
 jinja2>=3.1.3
 pydantic-settings>=2.1.0
+pyjwt[crypto]
+passlib[bcrypt]
 
 # SC-machine
 websockets==11.0.0

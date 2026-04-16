@@ -7,7 +7,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key = True, index = True)
     login: Mapped[str] = mapped_column(String, index = True, nullable = False)
     password: Mapped[str] = mapped_column(String, index = True, nullable = False)
-    keys : Mapped[JSON] = mapped_column(JSON, index = True, nullable = False) # dict {"key_name": "key"}
+    api_keys : Mapped[dict] = mapped_column(JSONB, index = True, nullable = False) # dict {"key_name": "key"}
 
     def __repr__(self) -> str:
         return f"User(login='{self.login}', id='{self.id}')"

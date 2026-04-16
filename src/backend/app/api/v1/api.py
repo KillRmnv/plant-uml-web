@@ -13,4 +13,6 @@ router.include_router(users_router, prefix="/users", tags=["users"])
 from backend.app.api.v1.routes.auth import router as auth_router
 router.include_router(auth_router, prefix="/auth", tags=["auth"])
 
+from backend.app.api.v1.routes.chat import router as chat_router
+router.include_router(chat_router, prefix="/chat", tags=["chat"])
 
