@@ -101,18 +101,6 @@ async def set_chat_title(db: AsyncSession, chat_id: int, title: str) -> None:
     await db.flush()
 
 
-async def get_chat_preview(db: AsyncSession, chat_id: int) -> str:
-    stmt = (
-        select(Message.content)
-        .where(Message.chat_id == chat_id)
-        .order_by(desc(Message.created_at))
-        .limit(1)
-    )
-    result = await db.execute(stmt)
-    preview = result.scalar_one_or_none()
-    return preview[:50] if preview else ""
-
-
 async def get_previews_batch(
     db: AsyncSession, chat_ids: list[int]
 ) -> dict[int, str]:

@@ -1,54 +1,31 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-from backend.app.domains.users import crud, schemas
-from backend.app.domains.users.models import User
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.app.core.security import get_password_hash, verify_password
-from backend.app.domains.users.exceptions import (
-    UserNotFoundError,
-    InvalidCredentialsError,
-)
+from backend.app.domains.users import crud, schemas
+from backend.app.domains.users.exceptions import InvalidCredentialsError
+from backend.app.domains.users.models import User
 
 logger = logging.getLogger(__name__)
 
 
 async def register_new_user(db: AsyncSession, user_in: schemas.UserCreate) -> User:
-    """
-    Бизнес-логика регистрации пользователя.
-    1. Хеширует пароль.
-    2. Вызывает слой БД для сохранения.
-    3. (Здесь в будущем можно добавить отправку email или создание дефолтных настроек).
-    """
+    """Хеширует пароль и создаёт пользователя в БД."""
     logger.info(f"Attempting to register user: {user_in.login}")
-
     hashed_password = get_password_hash(user_in.password)
     user = await crud.create_user(
         db=db, login=user_in.login, hashed_password=hashed_password
     )
-
     logger.info(f"Successfully registered user: {user.login}, id={user.id}")
-    return user
-
-
-async def get_user_profile(db: AsyncSession, user_id: int) -> User:
-    """Получение профиля с проверкой существования."""
-    logger.info(f"Fetching user profile: id={user_id}")
-    user = await crud.get_user_by_id(db, user_id)
-    if not user:
-        logger.warning(f"User not found: id={user_id}")
-        raise UserNotFoundError(user_id)
-    logger.info(f"User profile retrieved: {user.login}")
     return user
 
 
 async def authenticate_user(db: AsyncSession, login: str, password: str) -> User:
     logger.info(f"Authenticating user: {login}")
     user = await crud.get_user_by_login(db, login)
-    if not user:
-        logger.warning(f"User not found during auth: {login}")
-        raise InvalidCredentialsError()
-    if not verify_password(password, user.password):
-        logger.warning(f"Invalid password for user: {login}")
+    if not user or not verify_password(password, user.password):
+        logger.warning(f"Invalid credentials for login: {login}")
         raise InvalidCredentialsError()
     logger.info(f"User authenticated successfully: {login}")
     return user
