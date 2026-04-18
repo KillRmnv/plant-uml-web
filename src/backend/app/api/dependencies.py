@@ -5,11 +5,9 @@ import jwt
 from backend.app.config import settings
 from backend.app.db.database import get_db
 
-# Импортируйте ваши модели и запросы (CRUD) к пользователям
 from backend.app.domains.users import models
 from backend.app.domains.users.crud import get_user_by_login
 
-# tokenUrl - это эндпоинт, на который Swagger UI будет отправлять логин/пароль
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
@@ -22,7 +20,6 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # Расшифровываем токен
         payload = jwt.decode(
             token, settings.secret_key, algorithms=[settings.jwt_algorithm]
         )
@@ -32,7 +29,6 @@ async def get_current_user(
     except jwt.PyJWTError:
         raise credentials_exception
 
-    # Ищем пользователя в БД (эту функцию нужно будет написать в app/domains/users/crud.py)
     user = await get_user_by_login(db, login=login)
     if user is None:
         raise credentials_exception
