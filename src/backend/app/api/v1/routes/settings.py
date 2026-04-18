@@ -51,8 +51,10 @@ async def get_providers(
     logger.info(f"[get_providers] Request for user: {current_user.login}")
     try:
         return await settings_service.get_configured_providers(db, current_user.id)
-    except SettingsDomainError:
-        raise
+    except SettingsDomainError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
     except Exception:
         logger.exception("Failed to retrieve providers list")
         raise HTTPException(

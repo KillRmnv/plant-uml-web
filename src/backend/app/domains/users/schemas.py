@@ -1,9 +1,12 @@
-from typing import Literal, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserBase(BaseModel):
     login: str = Field(..., min_length=3, max_length=20, validation_alias="username")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class UserCreate(UserBase):
@@ -18,18 +21,13 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserApiKeysUpdate(BaseModel):
-    provider: Literal["openai", "anthropic", "mistral", "openrouter", "localai"]
-    api_key: str = Field(..., min_length=10)
-
-
 class UserSettingsCreate(BaseModel):
+    """Partial-update payload for user settings. Fields set to None are ignored."""
+
     provider: Optional[str] = None
     model: Optional[str] = None
-    auto_save: Optional[bool] = None  # None means "don't change"
-    api_keys: Optional[dict] = (
-        None  # {"openai": "sk-...", "anthropic": "...", "mistral": "..."}
-    )
+    auto_save: Optional[bool] = None
+    api_keys: Optional[dict[str, str]] = None
 
 
 class UserSettingsResponse(BaseModel):
