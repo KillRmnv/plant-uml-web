@@ -19,9 +19,10 @@ if os.path.exists(ENV_FILE):
     os.environ["ENV_FILE"] = ENV_FILE
 
 from backend.app.config import settings
-from backend.app.db.database import Base
+from backend.app.infrastructure.db.database import Base
 
-from backend.app.domains.users.models import *
+from backend.app.infrastructure.persistence.users_models import *  # noqa: F401,F403
+from backend.app.infrastructure.persistence.chat_models import *  # noqa: F401,F403
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -9,8 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
 from backend.app.config import settings
-from backend.app.integrations.deps import init_sc_client, disconnect
-from backend.app.api.v1.api import router as api_v1_router
+from backend.app.infrastructure.sc_machine.deps import init_sc_client, disconnect
+from backend.app.presentation.api.v1.api import router as api_v1_router
 
 from backend.app.core.exception_handlers import setup_exception_handlers
 

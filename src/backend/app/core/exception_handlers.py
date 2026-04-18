@@ -2,12 +2,12 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 # Импортируем наши доменные ошибки
-from backend.app.domains.users.exceptions import (
+from backend.app.domain.users.exceptions import (
     UserAlreadyExistsError,
     UserNotFoundError,
     InvalidCredentialsError,
 )
-from backend.app.domains.chat.exceptions import (
+from backend.app.domain.chat.exceptions import (
     APIKeyNotConfiguredError,
     ChatAccessDeniedError,
     LLMProviderError,

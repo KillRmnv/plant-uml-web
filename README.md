@@ -164,21 +164,24 @@ plant-uml-web/
 │   │       ├── render/             # Рендеринг (ScS/SCg)
 │   │       ├── assistant/          # AI ассистент
 │   │       └── settings/           # Настройки
-│   └── backend/                    # Backend (FastAPI)
+│   └── backend/                    # Backend (FastAPI, Clean Architecture)
 │       ├── main.py                 # Точка входа
 │       ├── app/
-│       │   ├── config.py           # Pydantic settings
-│       │   ├── api/v1/             # API v1 роуты
-│       │   │   ├── api.py          # Сборка роутеров
-│       │   │   └── routes/
-│       │   │       └── sc_web.py   # SC-web legacy endpoints
-│       │   ├── core/               # Утилиты (декораторы)
-│       │   ├── db/                 # База данных
-│       │   ├── domains/            # Бизнес-логика
-│       │   └── integrations/
-│       │       ├── sc_session.py   # Сессии и команды sc-machine
-│       │       ├── keynodes.py     # Кейноды
-│       │       └── deps.py         # Инициализация sc-client
+│       │   ├── config.py                 # Pydantic settings
+│       │   ├── core/                     # Общие утилиты (security, декораторы, обработчики ошибок)
+│       │   ├── domain/                   # Доменный слой (исключения, VO, интерфейсы)
+│       │   │   ├── users/
+│       │   │   └── chat/
+│       │   ├── application/              # Прикладные сервисы / use cases и DTO
+│       │   │   ├── users/                #   services, settings_services, schemas
+│       │   │   └── chat/                 #   services, schemas
+│       │   ├── infrastructure/           # Реализации (ORM, внешние API)
+│       │   │   ├── db/                   #   подключение к БД, Base
+│       │   │   ├── persistence/          #   модели SQLAlchemy + репозитории
+│       │   │   ├── llm/                  #   клиент LLM провайдеров
+│       │   │   └── sc_machine/           #   интеграция sc-machine
+│       │   └── presentation/             # Презентационный слой
+│       │       └── api/v1/routes/        #   FastAPI роутеры + dependencies
 │       ├── handlers/               # Обработчики (legacy, удалён)
 │       ├── templates/              # Jinja2 шаблоны
 │       └── alembic/                # Миграции БД
