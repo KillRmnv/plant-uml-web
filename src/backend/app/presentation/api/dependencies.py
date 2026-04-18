@@ -5,7 +5,7 @@ import jwt
 
 from backend.app.config import settings
 from backend.app.infrastructure.db.database import get_db
-from backend.app.infrastructure.persistence.users_models import User
+from backend.app.domain.users.entities import User
 from backend.app.application.users import services as users_services
 
 # tokenUrl - это эндпоинт, на который Swagger UI будет отправлять логин/пароль

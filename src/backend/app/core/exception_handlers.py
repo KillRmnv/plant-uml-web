@@ -6,6 +6,9 @@ from backend.app.domain.users.exceptions import (
     UserAlreadyExistsError,
     UserNotFoundError,
     InvalidCredentialsError,
+    ProviderNotSupportedError,
+    ProviderModelsUnavailableError,
+    ProviderAPIError,
 )
 from backend.app.domain.chat.exceptions import (
     APIKeyNotConfiguredError,
@@ -57,4 +60,32 @@ def setup_exception_handlers(app: FastAPI) -> None:
     async def llm_error_handler(request: Request, exc: LLMProviderError):
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY, content={"detail": exc.message}
+        )
+
+    # -- Обработчики LLM-провайдеров (работа с настройками/моделями) --
+    @app.exception_handler(ProviderNotSupportedError)
+    async def provider_not_supported_handler(
+        request: Request, exc: ProviderNotSupportedError
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": exc.message, "models": []},
+        )
+
+    @app.exception_handler(ProviderModelsUnavailableError)
+    async def provider_models_unavailable_handler(
+        request: Request, exc: ProviderModelsUnavailableError
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"detail": exc.message, "models": []},
+        )
+
+    @app.exception_handler(ProviderAPIError)
+    async def provider_api_error_handler(
+        request: Request, exc: ProviderAPIError
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            content={"detail": exc.message, "models": []},
         )

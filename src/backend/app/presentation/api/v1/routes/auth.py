@@ -7,7 +7,7 @@ from backend.app.infrastructure.db.database import get_db
 from backend.app.presentation.api.dependencies import get_current_user
 from backend.app.core.security import create_access_token
 from backend.app.application.users import services, schemas
-from backend.app.infrastructure.persistence.users_models import User
+from backend.app.domain.users.entities import User
 
 logger = logging.getLogger(__name__)
 

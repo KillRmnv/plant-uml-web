@@ -5,9 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.infrastructure.db.database import get_db
 from backend.app.presentation.api.dependencies import get_current_user
-from backend.app.infrastructure.persistence.users_models import User
+from backend.app.domain.users.entities import User
 from backend.app.application.users import schemas
 from backend.app.application.users import settings_services
+from backend.app.application.llm import llm_services
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ async def get_providers(
 ):
     """Получить доступные провайдеры AI."""
     logger.info(f"[get_providers] Request for user: {current_user.login}")
-    return await settings_services.list_configured_providers(db, current_user.id)
+    return await llm_services.list_configured_providers(db, current_user.id)
 
 
 @router.get("/assistant/models")
@@ -57,6 +58,7 @@ async def get_models(
     logger.info(
         f"[get_models] Request for provider: {provider}, user: {current_user.login}"
     )
-    return await settings_services.list_models_for_provider(
+    models = await llm_services.list_models_for_provider(
         db, current_user.id, provider
     )
+    return {"models": models}

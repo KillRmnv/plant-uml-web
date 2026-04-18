@@ -273,3 +273,42 @@ async def fetch_openai_compatible_models(
             }
             for m in data.get("data", [])
         ]
+
+
+async def fetch_models(provider: str, api_key: str) -> list[dict[str, str]]:
+    """Единая точка входа для получения списка моделей провайдера.
+
+    Инкапсулирует все HTTP-детали (httpx, заголовки, форматы ответов) и
+    бросает доменные исключения — application-слой не знает ни про httpx,
+    ни про HTTP-статусы.
+    """
+    from backend.app.domain.users.exceptions import (
+        ProviderAPIError,
+        ProviderModelsUnavailableError,
+        ProviderNotSupportedError,
+    )
+
+    config = get_provider_config(provider)
+    if not config:
+        raise ProviderNotSupportedError(provider)
+
+    if provider == "anthropic":
+        raise ProviderModelsUnavailableError(provider)
+
+    try:
+        if provider == "openai":
+            return await fetch_openai_models(api_key)
+
+        base_url = config["base_url"]
+        return await fetch_openai_compatible_models(base_url, api_key)
+    except httpx.HTTPStatusError as exc:
+        raise ProviderAPIError(
+            provider=provider,
+            detail=f"Ошибка API: {exc.response.status_code}",
+            status_code=exc.response.status_code,
+        ) from exc
+    except httpx.RequestError as exc:
+        raise ProviderAPIError(
+            provider=provider,
+            detail=f"Ошибка при обращении к API провайдера: {exc}",
+        ) from exc

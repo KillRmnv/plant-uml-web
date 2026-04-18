@@ -3,7 +3,7 @@ import logging
 
 from backend.app.infrastructure.persistence import users_repository as crud
 from backend.app.application.users import schemas
-from backend.app.infrastructure.persistence.users_models import User
+from backend.app.domain.users.entities import User
 from backend.app.core.security import get_password_hash, verify_password
 from backend.app.domain.users.exceptions import (
     UserNotFoundError,

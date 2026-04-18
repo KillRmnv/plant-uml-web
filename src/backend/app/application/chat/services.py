@@ -5,7 +5,7 @@ from openai import RateLimitError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.infrastructure.persistence import chat_repository as crud
-from backend.app.infrastructure.persistence.users_models import User
+from backend.app.domain.users.entities import User
 from backend.app.application.users import settings_services
 from backend.app.domain.chat.exceptions import APIKeyNotConfiguredError
 from backend.app.infrastructure.llm import client as llm_client
@@ -161,7 +161,7 @@ async def process_chat_consultation(
         and normalized_chat_id is None
         and message_text.strip()
     ):
-        await crud.update_chat_title_object(db, chat, _build_chat_title(message_text))
+        await crud.update_chat_title_by_id(db, chat.id, _build_chat_title(message_text))
 
     await crud.add_message(db=db, chat_id=chat.id, role="user", content=message_text)
 
