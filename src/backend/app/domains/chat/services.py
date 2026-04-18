@@ -2,7 +2,7 @@ import logging
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.domains.chat import crud
+from backend.app.domains.chat import crud, schemas
 from backend.app.domains.chat.models import Message
 from backend.app.domains.users.models import User
 from backend.app.domains.users import settings_service
@@ -60,10 +60,8 @@ async def process_chat_consultation(
             normalized_chat_id,
         )
 
-    # 1. Получаем API ключ через сервис настроек
     api_key = await settings_service.get_api_key(db, user.id, provider)
 
-    # 2. Работа с БД (создание чата и сохранение вопроса)
     chat = await crud.get_or_create_chat(db, user.id, normalized_chat_id)
     if (
         chat.title == "Новый анализ"
@@ -77,16 +75,12 @@ async def process_chat_consultation(
     db.add(user_msg)
     await db.commit()
 
-    # 3. Формирование контекста
     history = await crud.get_chat_history(db, chat.id, limit=10)
     messages_context = [
         {"role": "system", "content": SYSTEM_PROMPT.format(diagram_code=diagram_code)}
     ]
     messages_context.extend(history)
 
-    # 4. Инициализация LLM генератора
-    # Обратите внимание: мы передаем db в генератор. SQLAlchemy 2.0 AsyncSession
-    # безопасно работает внутри yield, если используется expire_on_commit=False [web:116].
     llm_generator = generate_and_save_response(
         db=db,
         chat_id=chat.id,
@@ -98,13 +92,17 @@ async def process_chat_consultation(
     return chat.id, llm_generator
 
 
-async def list_user_chats(db: AsyncSession, user_id: int):
+async def list_user_chats(db: AsyncSession, user_id: int) -> list[schemas.ChatResponse]:
     chats = await crud.list_user_chats(db, user_id)
-    responses = []
-    for chat in chats:
-        chat.preview = await crud.get_chat_preview(db, chat.id)  # type: ignore[attr-defined]
-        responses.append(chat)
-    return responses
+    return [
+        schemas.ChatResponse(
+            id=chat.id,
+            title=chat.title,
+            created_at=chat.created_at,
+            preview=await crud.get_chat_preview(db, chat.id),
+        )
+        for chat in chats
+    ]
 
 
 async def create_user_chat(db: AsyncSession, user_id: int, title: str | None):

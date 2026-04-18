@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.database import get_db
@@ -48,7 +48,14 @@ async def get_providers(
 ):
     """Получить доступные провайдеры AI."""
     logger.info(f"[get_providers] Request for user: {current_user.login}")
-    return await settings_service.get_configured_providers(db, current_user.id)
+    try:
+        return await settings_service.get_configured_providers(db, current_user.id)
+    except Exception:
+        logger.exception("[get_providers] Failed to load providers")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось получить список провайдеров.",
+        )
 
 
 @router.get("/assistant/models")
