@@ -13,6 +13,7 @@ from backend.app.domains.users.exceptions import (
     AnthropicModelsNotSupportedError,
     ProviderAPIError,
     ProviderConnectionError,
+    SettingsDomainError,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,8 +51,10 @@ async def get_providers(
     logger.info(f"[get_providers] Request for user: {current_user.login}")
     try:
         return await settings_service.get_configured_providers(db, current_user.id)
+    except SettingsDomainError:
+        raise
     except Exception:
-        logger.exception("[get_providers] Failed to load providers")
+        logger.exception("Failed to retrieve providers list")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось получить список провайдеров.",

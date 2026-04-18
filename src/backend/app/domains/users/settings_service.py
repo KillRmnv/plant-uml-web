@@ -1,5 +1,6 @@
 import logging
 import time
+from functools import lru_cache
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,14 +21,37 @@ from backend.app.integrations.llm.client import (
 
 logger = logging.getLogger(__name__)
 
-_providers_cache: list[dict] | None = None
 
-
+@lru_cache(maxsize=1)
 def _get_providers() -> list[dict]:
-    global _providers_cache
-    if _providers_cache is None:
-        _providers_cache = list_available_providers()
-    return _providers_cache
+    return list_available_providers()
+
+
+async def _fetch_models_from_api(
+    url: str, api_key: str, provider: str, start_time: float
+) -> list[dict]:
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=10.0,
+            )
+            if response.status_code != 200:
+                elapsed = time.time() - start_time
+                logger.error(
+                    f"[list_provider_models] {provider} error: {response.status_code} - {response.text} ({elapsed:.2f}s)"
+                )
+                raise ProviderAPIError(
+                    provider=provider, status_code=response.status_code
+                )
+            return response.json().get("data", [])
+    except httpx.RequestError as e:
+        elapsed = time.time() - start_time
+        logger.error(
+            f"[list_provider_models] Request error for {provider}: {e} ({elapsed:.2f}s)"
+        )
+        raise ProviderConnectionError(provider=provider, message=str(e))
 
 
 async def get_or_create_settings(db: AsyncSession, user_id: int) -> UserSettings:
@@ -52,7 +76,8 @@ async def save_settings(
     if data.auto_save is not None:
         update_data["auto_save"] = data.auto_save
     if data.api_keys is not None:
-        update_data["api_keys"] = data.api_keys
+        existing_keys = (existing.api_keys or {}) if existing else {}
+        update_data["api_keys"] = {**existing_keys, **data.api_keys}
 
     if not existing and not update_data:
         return await settings_crud.create_or_update_settings(db, user_id)
@@ -122,34 +147,10 @@ async def list_provider_models(
         )
         raise AnthropicModelsNotSupportedError()
 
-    async def _fetch_models_from_api(url: str, api_key: str) -> list[dict]:
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    url,
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    timeout=10.0,
-                )
-                if response.status_code != 200:
-                    elapsed = time.time() - start_time
-                    logger.error(
-                        f"[list_provider_models] {provider} error: {response.status_code} - {response.text} ({elapsed:.2f}s)"
-                    )
-                    raise ProviderAPIError(
-                        provider=provider, status_code=response.status_code
-                    )
-                return response.json().get("data", [])
-        except httpx.RequestError as e:
-            elapsed = time.time() - start_time
-            logger.error(
-                f"[list_provider_models] Request error for {provider}: {e} ({elapsed:.2f}s)"
-            )
-            raise ProviderConnectionError(provider=provider, message=str(e))
-
     if provider == "openai":
         logger.info("[list_provider_models] Fetching models from OpenAI API")
         raw_models = await _fetch_models_from_api(
-            "https://api.openai.com/v1/models", api_key
+            "https://api.openai.com/v1/models", api_key, provider, start_time
         )
         models = [
             {"id": m["id"], "name": m["id"]}
@@ -166,7 +167,7 @@ async def list_provider_models(
         f"[list_provider_models] Fetching models from {provider} ({provider_config['base_url']})"
     )
     raw_models = await _fetch_models_from_api(
-        f"{provider_config['base_url']}/models", api_key
+        f"{provider_config['base_url']}/models", api_key, provider, start_time
     )
     models = [
         {
