@@ -28,7 +28,7 @@ def _get_providers() -> list[dict]:
 
 
 async def _fetch_models_from_api(
-    url: str, api_key: str, provider: str, start_time: float
+    url: str, api_key: str, provider: str
 ) -> list[dict]:
     try:
         async with httpx.AsyncClient() as client:
@@ -38,18 +38,16 @@ async def _fetch_models_from_api(
                 timeout=10.0,
             )
             if response.status_code != 200:
-                elapsed = time.time() - start_time
                 logger.error(
-                    f"[list_provider_models] {provider} error: {response.status_code} - {response.text} ({elapsed:.2f}s)"
+                    f"[list_provider_models] {provider} error: {response.status_code} - {response.text}"
                 )
                 raise ProviderAPIError(
                     provider=provider, status_code=response.status_code
                 )
             return response.json().get("data", [])
     except httpx.RequestError as e:
-        elapsed = time.time() - start_time
         logger.error(
-            f"[list_provider_models] Request error for {provider}: {e} ({elapsed:.2f}s)"
+            f"[list_provider_models] Request error for {provider}: {e}"
         )
         raise ProviderConnectionError(provider=provider, message=str(e))
 
@@ -150,7 +148,7 @@ async def list_provider_models(
     if provider == "openai":
         logger.info("[list_provider_models] Fetching models from OpenAI API")
         raw_models = await _fetch_models_from_api(
-            "https://api.openai.com/v1/models", api_key, provider, start_time
+            "https://api.openai.com/v1/models", api_key, provider
         )
         models = [
             {"id": m["id"], "name": m["id"]}
@@ -167,7 +165,7 @@ async def list_provider_models(
         f"[list_provider_models] Fetching models from {provider} ({provider_config['base_url']})"
     )
     raw_models = await _fetch_models_from_api(
-        f"{provider_config['base_url']}/models", api_key, provider, start_time
+        f"{provider_config['base_url']}/models", api_key, provider
     )
     models = [
         {

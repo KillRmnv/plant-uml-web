@@ -116,11 +116,15 @@ async def get_chat_preview(db: AsyncSession, chat_id: int) -> str:
 async def get_previews_batch(
     db: AsyncSession, chat_ids: list[int]
 ) -> dict[int, str]:
-    """Return a mapping of chat_id → preview text for the given chat IDs."""
+    """Return a mapping of chat_id → preview text.
+
+    For each chat, the content of the latest message (by created_at, then id) is
+    truncated to 50 characters.
+    """
     if not chat_ids:
         return {}
 
-    latest_subq = (
+    latest_created_subq = (
         select(
             Message.chat_id.label("chat_id"),
             func.max(Message.created_at).label("max_created_at"),
@@ -130,16 +134,24 @@ async def get_previews_batch(
         .subquery()
     )
 
+    latest_id_subq = (
+        select(func.max(Message.id).label("latest_id"))
+        .join(
+            latest_created_subq,
+            (Message.chat_id == latest_created_subq.c.chat_id)
+            & (Message.created_at == latest_created_subq.c.max_created_at),
+        )
+        .group_by(Message.chat_id)
+        .subquery()
+    )
+
     stmt = select(Message.chat_id, Message.content).join(
-        latest_subq,
-        (Message.chat_id == latest_subq.c.chat_id)
-        & (Message.created_at == latest_subq.c.max_created_at),
+        latest_id_subq,
+        Message.id == latest_id_subq.c.latest_id,
     )
     result = await db.execute(stmt)
 
     previews: dict[int, str] = {}
     for chat_id, content in result.all():
-        if chat_id in previews:
-            continue
         previews[chat_id] = (content or "")[:50]
     return previews
