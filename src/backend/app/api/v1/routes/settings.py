@@ -28,7 +28,14 @@ async def get_settings(
 ):
     """Получить настройки текущего пользователя."""
     logger.info(f"Getting settings for user: {current_user.login}")
-    return await settings_service.get_or_create_settings(db, current_user.id)
+    try:
+        return await settings_service.get_or_create_settings(db, current_user.id)
+    except Exception:
+        logger.exception("[get_settings] Unexpected error for user=%s", current_user.login)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось получить настройки.",
+        )
 
 
 @router.post("/settings", response_model=schemas.UserSettingsResponse)
@@ -39,7 +46,14 @@ async def save_settings(
 ):
     """Сохранить настройки текущего пользователя."""
     logger.info(f"Saving settings for user: {current_user.login}")
-    return await settings_service.save_settings(db, current_user.id, settings_data)
+    try:
+        return await settings_service.save_settings(db, current_user.id, settings_data)
+    except Exception:
+        logger.exception("[save_settings] Unexpected error for user=%s", current_user.login)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось сохранить настройки.",
+        )
 
 
 @router.get("/assistant/providers")
@@ -102,4 +116,10 @@ async def get_models(
         raise HTTPException(
             status_code=504,
             detail=f"Ошибка соединения с провайдером '{e.provider}'.",
+        )
+    except Exception:
+        logger.exception("[get_models] Unexpected error for provider=%s", provider)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось получить список моделей.",
         )
