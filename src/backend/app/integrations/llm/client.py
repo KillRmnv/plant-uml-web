@@ -43,13 +43,6 @@ PROVIDER_CONFIG: dict[str, dict[str, Any]] = {
     },
 }
 
-OPENAI_COMPATIBLE_PROVIDERS = {
-    provider_id: config
-    for provider_id, config in PROVIDER_CONFIG.items()
-    if config["api_style"] == "openai"
-}
-
-
 def get_provider_config(provider: str) -> dict[str, Any] | None:
     return PROVIDER_CONFIG.get(provider)
 
@@ -58,17 +51,6 @@ def list_available_providers() -> list[dict[str, str]]:
     return [
         {"id": provider_id, "name": config["name"]}
         for provider_id, config in PROVIDER_CONFIG.items()
-    ]
-
-
-def list_openai_compatible_providers() -> list[dict[str, str]]:
-    return [
-        {
-            "id": provider_id,
-            "name": config["name"],
-            "base_url": config["base_url"],
-        }
-        for provider_id, config in OPENAI_COMPATIBLE_PROVIDERS.items()
     ]
 
 

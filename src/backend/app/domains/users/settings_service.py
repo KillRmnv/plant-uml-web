@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 
 @lru_cache(maxsize=1)
 def _get_providers() -> list[dict]:
+    """Return the list of available providers. Cached for the process lifetime.
+
+    To reload provider configuration, restart the process or call
+    ``_get_providers.cache_clear()``.
+    """
     return list_available_providers()
 
 

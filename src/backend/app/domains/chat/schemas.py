@@ -36,3 +36,7 @@ class ChatMessageResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ChatDeleteResponse(BaseModel):
+    success: bool

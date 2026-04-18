@@ -1,23 +1,18 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-# Импортируем наши доменные ошибки
 from backend.app.domains.users.exceptions import (
+    APIKeyNotConfiguredError,
+    InvalidCredentialsError,
     UserAlreadyExistsError,
     UserNotFoundError,
-    InvalidCredentialsError,
 )
-from backend.app.domains.chat.exceptions import (
-    APIKeyNotConfiguredError,
-    ChatAccessDeniedError,
-    LLMProviderError,
-)
+from backend.app.domains.chat.exceptions import ChatAccessDeniedError
 
 
 def setup_exception_handlers(app: FastAPI) -> None:
-    """Функция регистрирует все кастомные обработчики ошибок в приложении."""
+    """Регистрирует все кастомные обработчики доменных ошибок."""
 
-    # -- Обработчики Users --
     @app.exception_handler(UserAlreadyExistsError)
     async def user_exists_handler(request: Request, exc: UserAlreadyExistsError):
         return JSONResponse(
@@ -40,21 +35,15 @@ def setup_exception_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_404_NOT_FOUND, content={"detail": exc.message}
         )
 
-    # -- Обработчики Chat --
     @app.exception_handler(APIKeyNotConfiguredError)
     async def api_key_handler(request: Request, exc: APIKeyNotConfiguredError):
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST, content={"detail": exc.message}
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"detail": f"API ключ не настроен для провайдера '{exc.provider}'."},
         )
 
     @app.exception_handler(ChatAccessDeniedError)
     async def chat_access_handler(request: Request, exc: ChatAccessDeniedError):
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN, content={"detail": exc.message}
-        )
-
-    @app.exception_handler(LLMProviderError)
-    async def llm_error_handler(request: Request, exc: LLMProviderError):
-        return JSONResponse(
-            status_code=status.HTTP_502_BAD_GATEWAY, content={"detail": exc.message}
         )
