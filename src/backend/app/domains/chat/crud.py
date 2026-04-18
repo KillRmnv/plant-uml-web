@@ -1,7 +1,10 @@
 from sqlalchemy import select, desc, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.domains.chat.models import Chat, Message
-from backend.app.domains.chat.exceptions import ChatAccessDeniedError
+from backend.app.domains.chat.exceptions import (
+    ChatAccessDeniedError,
+    ChatNotFoundError,
+)
 
 
 async def get_or_create_chat(
@@ -13,10 +16,11 @@ async def get_or_create_chat(
         chat = result.scalar_one_or_none()
         if chat:
             return chat
-        exists_stmt = select(Chat).where(Chat.id == chat_id)
+        exists_stmt = select(Chat.id).where(Chat.id == chat_id)
         exists = await db.execute(exists_stmt)
         if exists.scalar_one_or_none():
             raise ChatAccessDeniedError(chat_id)
+        raise ChatNotFoundError(chat_id)
 
     new_chat = Chat(user_id=user_id)
     db.add(new_chat)

@@ -36,7 +36,7 @@ class UserSettingsResponse(BaseModel):
     provider: Optional[str] = None
     model: Optional[str] = None
     auto_save: Optional[bool] = True
-    api_keys: dict = Field(default_factory=dict)
+    api_keys: dict[str, str] = Field(default_factory=dict)
 
     model_config = ConfigDict(from_attributes=True)
 
