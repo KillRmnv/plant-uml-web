@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
@@ -8,15 +7,11 @@ from backend.app.api.dependencies import get_current_user
 from backend.app.core.security import create_access_token
 from backend.app.domains.users import services, schemas
 from backend.app.domains.users.models import User
+from backend.app.domains.users.schemas import LoginRequest
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["auth"])
-
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
 
 
 @router.post(
