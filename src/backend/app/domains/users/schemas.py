@@ -46,3 +46,16 @@ class UserSettingsResponse(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class UserBrief(BaseModel):
+    id: int
+    username: str = Field(..., validation_alias="login")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserBrief
