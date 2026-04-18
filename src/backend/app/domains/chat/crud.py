@@ -1,4 +1,4 @@
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.domains.chat.models import Chat, Message
 from backend.app.domains.chat.exceptions import ChatAccessDeniedError
@@ -95,7 +95,6 @@ async def set_chat_title(db: AsyncSession, chat_id: int, title: str) -> None:
     Changes are flushed but not committed — the caller is responsible
     for committing the transaction.
     """
-    from sqlalchemy import update
     await db.execute(
         update(Chat).where(Chat.id == chat_id).values(title=title)
     )
@@ -112,3 +111,35 @@ async def get_chat_preview(db: AsyncSession, chat_id: int) -> str:
     result = await db.execute(stmt)
     preview = result.scalar_one_or_none()
     return preview[:50] if preview else ""
+
+
+async def get_previews_batch(
+    db: AsyncSession, chat_ids: list[int]
+) -> dict[int, str]:
+    """Return a mapping of chat_id → preview text for the given chat IDs."""
+    if not chat_ids:
+        return {}
+
+    latest_subq = (
+        select(
+            Message.chat_id.label("chat_id"),
+            func.max(Message.created_at).label("max_created_at"),
+        )
+        .where(Message.chat_id.in_(chat_ids))
+        .group_by(Message.chat_id)
+        .subquery()
+    )
+
+    stmt = select(Message.chat_id, Message.content).join(
+        latest_subq,
+        (Message.chat_id == latest_subq.c.chat_id)
+        & (Message.created_at == latest_subq.c.max_created_at),
+    )
+    result = await db.execute(stmt)
+
+    previews: dict[int, str] = {}
+    for chat_id, content in result.all():
+        if chat_id in previews:
+            continue
+        previews[chat_id] = (content or "")[:50]
+    return previews

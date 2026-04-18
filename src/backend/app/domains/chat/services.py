@@ -94,12 +94,14 @@ async def process_chat_consultation(
 
 async def list_user_chats(db: AsyncSession, user_id: int) -> list[schemas.ChatResponse]:
     chats = await crud.list_user_chats(db, user_id)
+    chat_ids = [chat.id for chat in chats]
+    previews = await crud.get_previews_batch(db, chat_ids)
     return [
         schemas.ChatResponse(
             id=chat.id,
             title=chat.title,
             created_at=chat.created_at,
-            preview=await crud.get_chat_preview(db, chat.id),
+            preview=previews.get(chat.id, ""),
         )
         for chat in chats
     ]

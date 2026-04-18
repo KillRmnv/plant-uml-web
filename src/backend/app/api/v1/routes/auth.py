@@ -27,7 +27,7 @@ async def register(user_in: schemas.UserCreate, db: AsyncSession = Depends(get_d
     return result
 
 
-@router.post("/login")
+@router.post("/login", response_model=schemas.LoginResponse)
 async def login_for_access_token(
     login_data: LoginRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -37,11 +37,11 @@ async def login_for_access_token(
     )
     access_token = create_access_token(data={"sub": user.login})
     logger.info(f"User logged in: id={user.id}, login={user.login}")
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": {"id": user.id, "username": user.login},
-    }
+    return schemas.LoginResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user=schemas.UserBrief.model_validate(user),
+    )
 
 
 @router.get("/me", response_model=schemas.UserResponse)
