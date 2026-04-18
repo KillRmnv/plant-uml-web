@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.domains.chat import crud
 from backend.app.domains.chat.models import Message
 from backend.app.domains.users.models import User
-from backend.app.domains.users import settings_crud
+from backend.app.domains.users import settings_service
 from backend.app.integrations.llm.client import generate_and_save_response
-from backend.app.domains.chat.exceptions import APIKeyNotConfiguredError
+from backend.app.domains.users.exceptions import APIKeyNotConfiguredError
 
 logger = logging.getLogger(__name__)
 PG_INT32_MAX = 2_147_483_647
@@ -60,17 +60,8 @@ async def process_chat_consultation(
             normalized_chat_id,
         )
 
-    # 1. Получаем настройки пользователя для получения API ключа
-    settings = await settings_crud.get_settings_by_user_id(db, user.id)
-
-    if not settings or not settings.api_keys:
-        logger.warning("[chat.service] missing settings for provider=%s user_id=%s", provider, user.id)
-        raise APIKeyNotConfiguredError(provider=provider)
-
-    api_key = settings.api_keys.get(provider)
-    if not api_key:
-        logger.warning("[chat.service] missing api_key for provider=%s user_id=%s", provider, user.id)
-        raise APIKeyNotConfiguredError(provider=provider)
+    # 1. Получаем API ключ через сервис настроек
+    api_key = await settings_service.get_api_key(db, user.id, provider)
 
     # 2. Работа с БД (создание чата и сохранение вопроса)
     chat = await crud.get_or_create_chat(db, user.id, normalized_chat_id)
@@ -79,7 +70,8 @@ async def process_chat_consultation(
         and normalized_chat_id is None
         and message_text.strip()
     ):
-        chat.title = _build_chat_title(message_text)
+        new_title = _build_chat_title(message_text)
+        await crud.set_chat_title(db, chat.id, new_title)
 
     user_msg = Message(chat_id=chat.id, role="user", content=message_text)
     db.add(user_msg)

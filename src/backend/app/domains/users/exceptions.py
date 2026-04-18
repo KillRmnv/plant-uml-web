@@ -17,3 +17,32 @@ class InvalidCredentialsError(UserDomainError):
     def __init__(self):
         self.message = "Неверный логин или пароль."
         super().__init__(self.message)
+
+
+class APIKeyNotConfiguredError(Exception):
+    def __init__(self, provider: str):
+        self.provider = provider
+        super().__init__(f"API key not configured for provider: {provider}")
+
+
+class ProviderNotSupportedError(Exception):
+    def __init__(self, provider: str):
+        self.provider = provider
+        super().__init__(f"Provider not supported: {provider}")
+
+
+class AnthropicModelsNotSupportedError(Exception):
+    pass
+
+
+class ProviderAPIError(Exception):
+    def __init__(self, provider: str, status_code: int):
+        self.provider = provider
+        self.status_code = status_code
+        super().__init__(f"Provider API error {status_code} for {provider}")
+
+
+class ProviderConnectionError(Exception):
+    def __init__(self, provider: str, message: str):
+        self.provider = provider
+        super().__init__(f"Connection error for {provider}: {message}")

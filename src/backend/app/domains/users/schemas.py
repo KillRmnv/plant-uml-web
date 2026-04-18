@@ -41,3 +41,8 @@ class UserSettingsResponse(BaseModel):
     api_keys: dict = {}
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str

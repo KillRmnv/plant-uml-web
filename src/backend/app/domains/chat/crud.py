@@ -96,6 +96,14 @@ async def get_chat_messages(
     return list(result.scalars().all())
 
 
+async def set_chat_title(db: AsyncSession, chat_id: int, title: str) -> None:
+    from sqlalchemy import update
+    await db.execute(
+        update(Chat).where(Chat.id == chat_id).values(title=title)
+    )
+    await db.flush()
+
+
 async def get_chat_preview(db: AsyncSession, chat_id: int) -> str:
     stmt = (
         select(Message.content)
