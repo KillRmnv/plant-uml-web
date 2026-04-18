@@ -3,16 +3,17 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from backend.app.config import settings
 from backend.app.integrations.deps import init_sc_client, disconnect
 from backend.app.api.v1.api import router as api_v1_router
 
 from backend.app.core.exception_handlers import setup_exception_handlers
+from backend.app.domains.users.exceptions import SettingsDomainError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -58,6 +59,14 @@ async def redirect_api_v1(request: Request, call_next):
 
 
 setup_exception_handlers(app)
+
+
+@app.exception_handler(SettingsDomainError)
+async def settings_domain_error_handler(request: Request, exc: SettingsDomainError):
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)},
+    )
 
 # CORS
 app.add_middleware(
