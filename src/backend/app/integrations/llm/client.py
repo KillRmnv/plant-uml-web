@@ -266,11 +266,9 @@ async def generate_and_save_response(
         full_response_chunks.append(error_msg)
         yield _format_sse({"error": error_msg})
 
-    except Exception as exc:
+    except Exception:
         logger.exception("[LLM] error provider=%s", provider)
-        error_msg = (
-            f"[Ошибка генерации ответа от {config['name']}: {str(exc) or 'unknown error'}]"
-        )
+        error_msg = f"[Ошибка генерации ответа от {config['name']}.]"
         full_response_chunks.append(error_msg)
         yield _format_sse({"error": error_msg})
 

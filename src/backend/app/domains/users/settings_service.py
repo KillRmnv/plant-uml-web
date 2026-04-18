@@ -22,6 +22,26 @@ from backend.app.integrations.llm.client import (
 logger = logging.getLogger(__name__)
 
 
+def _mask_api_keys(api_keys: dict[str, str]) -> dict[str, str]:
+    """Mask API key values, exposing only the last 4 characters."""
+    return {
+        provider: f"***{key[-4:]}" if len(key) > 4 else "***"
+        for provider, key in (api_keys or {}).items()
+    }
+
+
+def _to_masked_response(settings: UserSettings) -> schemas.UserSettingsResponse:
+    """Build the client-facing settings response with API keys masked."""
+    return schemas.UserSettingsResponse(
+        id=settings.id,
+        user_id=settings.user_id,
+        provider=settings.provider,
+        model=settings.model,
+        auto_save=settings.auto_save,
+        api_keys=_mask_api_keys(settings.api_keys or {}),
+    )
+
+
 @lru_cache(maxsize=1)
 def _get_providers() -> list[dict]:
     """Return the list of available providers. Cached for the process lifetime.
@@ -57,18 +77,27 @@ async def _fetch_models_from_api(
         raise ProviderConnectionError(provider=provider, message=str(e))
 
 
-async def get_or_create_settings(db: AsyncSession, user_id: int) -> UserSettings:
-    """Получить настройки пользователя или создать пустые по умолчанию."""
+async def get_or_create_settings(
+    db: AsyncSession, user_id: int
+) -> schemas.UserSettingsResponse:
+    """Получить настройки пользователя или создать пустые по умолчанию.
+
+    API-ключи маскируются перед возвратом клиенту.
+    """
     settings = await settings_crud.get_settings_by_user_id(db, user_id)
     if not settings:
         settings = await settings_crud.create_or_update_settings(db, user_id)
-    return settings
+    return _to_masked_response(settings)
 
 
 async def save_settings(
     db: AsyncSession, user_id: int, data: schemas.UserSettingsCreate
-) -> UserSettings:
-    """Сохранить настройки пользователя."""
+) -> schemas.UserSettingsResponse:
+    """Сохранить настройки пользователя.
+
+    В БД сохраняются оригинальные значения API-ключей, а в ответе клиенту они
+    маскируются.
+    """
     existing = await settings_crud.get_settings_by_user_id(db, user_id)
 
     update_data = {}
@@ -83,13 +112,14 @@ async def save_settings(
         update_data["api_keys"] = {**existing_keys, **data.api_keys}
 
     if not existing and not update_data:
-        return await settings_crud.create_or_update_settings(db, user_id)
-
-    return await settings_crud.create_or_update_settings(
-        db=db,
-        user_id=user_id,
-        **update_data,
-    )
+        settings = await settings_crud.create_or_update_settings(db, user_id)
+    else:
+        settings = await settings_crud.create_or_update_settings(
+            db=db,
+            user_id=user_id,
+            **update_data,
+        )
+    return _to_masked_response(settings)
 
 
 async def get_configured_providers(db: AsyncSession, user_id: int) -> list[dict]:

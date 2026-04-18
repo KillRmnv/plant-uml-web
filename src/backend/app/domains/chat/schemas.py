@@ -1,11 +1,13 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from backend.app.integrations.llm.constants import SupportedProvider
+
 
 class ChatConsultRequest(BaseModel):
-    provider: Literal["openai", "anthropic", "mistral", "openrouter", "localai"]
+    provider: SupportedProvider
     model: Optional[str] = None
     message: str = Field(..., min_length=1, max_length=2000)
     diagram_code: str = Field(..., description="Код PlantUML для контекста")

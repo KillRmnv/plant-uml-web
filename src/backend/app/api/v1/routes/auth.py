@@ -30,6 +30,12 @@ async def register(user_in: schemas.UserCreate, db: AsyncSession = Depends(get_d
         result = await services.register_new_user(db=db, user_in=user_in)
     except UserAlreadyExistsError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except Exception:
+        logger.exception("[register] Unexpected error for login=%s", user_in.login)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось зарегистрировать пользователя.",
+        )
     logger.info(f"User created: id={result.id}, login={result.login}")
     return result
 
@@ -48,6 +54,12 @@ async def login_for_access_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный логин или пароль.",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception:
+        logger.exception("[login] Unexpected error for username=%s", login_data.username)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось выполнить вход.",
         )
     access_token = create_access_token(data={"sub": user.login})
     logger.info(f"User logged in: id={user.id}, login={user.login}")
