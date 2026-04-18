@@ -45,7 +45,7 @@ async def login_for_access_token(
 
 
 @router.get("/me", response_model=schemas.UserResponse)
-async def get_current_user(
+async def get_me(
     current_user: User = Depends(get_current_user),
 ):
     """Получить текущего пользователя."""

@@ -20,7 +20,14 @@ from backend.app.integrations.llm.client import (
 
 logger = logging.getLogger(__name__)
 
-PROVIDERS = list_available_providers()
+_providers_cache: list[dict] | None = None
+
+
+def _get_providers() -> list[dict]:
+    global _providers_cache
+    if _providers_cache is None:
+        _providers_cache = list_available_providers()
+    return _providers_cache
 
 
 async def get_or_create_settings(db: AsyncSession, user_id: int) -> UserSettings:
@@ -61,9 +68,10 @@ async def get_configured_providers(db: AsyncSession, user_id: int) -> list[dict]
     """Вернуть список провайдеров с учётом настроенных ключей."""
     settings = await settings_crud.get_settings_by_user_id(db, user_id)
 
+    providers = _get_providers()
     configured_providers = []
     if settings and settings.api_keys:
-        for provider in PROVIDERS:
+        for provider in providers:
             if (
                 provider["id"] in settings.api_keys
                 and settings.api_keys[provider["id"]]
@@ -72,7 +80,7 @@ async def get_configured_providers(db: AsyncSession, user_id: int) -> list[dict]
         if configured_providers:
             return configured_providers
 
-    return PROVIDERS
+    return providers
 
 
 async def get_api_key(db: AsyncSession, user_id: int, provider: str) -> str:
@@ -114,69 +122,61 @@ async def list_provider_models(
         )
         raise AnthropicModelsNotSupportedError()
 
-    try:
-        if provider == "openai":
-            logger.info("[list_provider_models] Fetching models from OpenAI API")
+    async def _fetch_models_from_api(url: str, api_key: str) -> list[dict]:
+        try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    "https://api.openai.com/v1/models",
+                    url,
                     headers={"Authorization": f"Bearer {api_key}"},
                     timeout=10.0,
                 )
                 if response.status_code != 200:
                     elapsed = time.time() - start_time
                     logger.error(
-                        f"[list_provider_models] OpenAI error: {response.status_code} - {response.text} ({elapsed:.2f}s)"
+                        f"[list_provider_models] {provider} error: {response.status_code} - {response.text} ({elapsed:.2f}s)"
                     )
                     raise ProviderAPIError(
                         provider=provider, status_code=response.status_code
                     )
-                data = response.json()
-                models = [
-                    {"id": m["id"], "name": m["id"]}
-                    for m in data.get("data", [])
-                    if "gpt" in m["id"].lower()
-                ]
-                elapsed = time.time() - start_time
-                logger.info(
-                    f"[list_provider_models] OpenAI models count: {len(models)} ({elapsed:.2f}s)"
-                )
-                return models
-
-        logger.info(
-            f"[list_provider_models] Fetching models from {provider} ({provider_config['base_url']})"
-        )
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{provider_config['base_url']}/models",
-                headers={"Authorization": f"Bearer {api_key}"},
-                timeout=10.0,
-            )
-            if response.status_code != 200:
-                elapsed = time.time() - start_time
-                logger.error(
-                    f"[list_provider_models] {provider} error: {response.status_code} - {response.text} ({elapsed:.2f}s)"
-                )
-                raise ProviderAPIError(
-                    provider=provider, status_code=response.status_code
-                )
-            data = response.json()
-            models = [
-                {
-                    "id": m["id"],
-                    "name": m.get("id", m.get("name", "Unknown")),
-                }
-                for m in data.get("data", [])
-            ]
+                return response.json().get("data", [])
+        except httpx.RequestError as e:
             elapsed = time.time() - start_time
-            logger.info(
-                f"[list_provider_models] {provider} models count: {len(models)} ({elapsed:.2f}s)"
+            logger.error(
+                f"[list_provider_models] Request error for {provider}: {e} ({elapsed:.2f}s)"
             )
-            return models
+            raise ProviderConnectionError(provider=provider, message=str(e))
 
-    except httpx.RequestError as e:
-        elapsed = time.time() - start_time
-        logger.error(
-            f"[list_provider_models] Request error for {provider}: {e} ({elapsed:.2f}s)"
+    if provider == "openai":
+        logger.info("[list_provider_models] Fetching models from OpenAI API")
+        raw_models = await _fetch_models_from_api(
+            "https://api.openai.com/v1/models", api_key
         )
-        raise ProviderConnectionError(provider=provider, message=str(e))
+        models = [
+            {"id": m["id"], "name": m["id"]}
+            for m in raw_models
+            if "gpt" in m["id"].lower()
+        ]
+        elapsed = time.time() - start_time
+        logger.info(
+            f"[list_provider_models] OpenAI models count: {len(models)} ({elapsed:.2f}s)"
+        )
+        return models
+
+    logger.info(
+        f"[list_provider_models] Fetching models from {provider} ({provider_config['base_url']})"
+    )
+    raw_models = await _fetch_models_from_api(
+        f"{provider_config['base_url']}/models", api_key
+    )
+    models = [
+        {
+            "id": m["id"],
+            "name": m.get("id", m.get("name", "Unknown")),
+        }
+        for m in raw_models
+    ]
+    elapsed = time.time() - start_time
+    logger.info(
+        f"[list_provider_models] {provider} models count: {len(models)} ({elapsed:.2f}s)"
+    )
+    return models
