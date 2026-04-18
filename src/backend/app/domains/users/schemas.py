@@ -38,7 +38,7 @@ class UserSettingsResponse(BaseModel):
     provider: Optional[str] = None
     model: Optional[str] = None
     auto_save: Optional[bool] = True
-    api_keys: dict = {}
+    api_keys: dict = Field(default_factory=dict)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -48,14 +48,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class UserBrief(BaseModel):
-    id: int
-    username: str = Field(..., validation_alias="login")
-
-    model_config = ConfigDict(from_attributes=True)
+UserBrief = UserResponse
 
 
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str
-    user: UserBrief
+    user: UserResponse
