@@ -12,7 +12,7 @@ class AuthManager {
     this.user = null;
     this.redirectUrl = "/"; // Куда перенаправить после логина
 
-    this.init();
+    this.ready = this.init();
   }
 
   /**
@@ -120,6 +120,7 @@ class AuthManager {
     console.log("[AuthManager] Login attempt for:", username);
 
     try {
+      this.guestLogout();
       const result = await this.apiClient.login(username, password);
 
       this.isAuthenticated = true;
@@ -171,6 +172,7 @@ class AuthManager {
     } catch (error) {
       console.error("[AuthManager] Logout error:", error);
     } finally {
+      this.guestLogout();
       this.isAuthenticated = false;
       this.user = null;
       this.redirectToAuth();
@@ -182,6 +184,9 @@ class AuthManager {
    */
   guestLogin() {
     console.log("[AuthManager] Guest login");
+
+    this.apiClient.clearTokens();
+    this.apiClient._clearTokensStorage();
 
     // Устанавливаем флаг гостевого режима
     localStorage.setItem("guest_mode", "true");
