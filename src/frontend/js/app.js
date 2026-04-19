@@ -19,7 +19,10 @@ class App {
   async init() {
     console.log("[App] Initializing...");
 
-    this.initAuth();
+    const hasAccess = await this.initAuth();
+    if (!hasAccess) {
+      return;
+    }
     this.initApiClient();
     this.initPanelSystem();
     this.initRenderFactory();
@@ -35,9 +38,12 @@ class App {
   /**
    * Инициализация аутентификации
    */
-  initAuth() {
+  async initAuth() {
     // AuthManager уже инициализирован в auth-manager.js
     this.authManager = window.authManager || new AuthManager();
+    if (this.authManager.ready) {
+      await this.authManager.ready;
+    }
 
     console.log(
       "[App.initAuth] isAuthenticated:",
@@ -51,7 +57,7 @@ class App {
       // Сохраняем текущий URL для редиректа после логина
       this.authManager.redirectUrl = window.location.pathname;
       this.authManager.redirectToAuth();
-      return;
+      return false;
     }
 
     console.log("[App.initAuth] Access granted");
@@ -63,6 +69,8 @@ class App {
     window.addEventListener("auth:error", () => {
       this.updateUserUI();
     });
+
+    return true;
   }
 
   /**

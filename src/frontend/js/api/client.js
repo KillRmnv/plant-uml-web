@@ -465,6 +465,7 @@ class ApiClient {
     const data = {
       provider,
       model,
+      mode,
       message,
       diagram_code,
       chat_id: chatId,

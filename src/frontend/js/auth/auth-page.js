@@ -20,11 +20,14 @@ class AuthPage {
   /**
    * Инициализация
    */
-  init() {
+  async init() {
     console.log("[AuthPage] Initializing...");
 
     this.cacheElements();
     this.bindEvents();
+    if (this.authManager?.ready) {
+      await this.authManager.ready;
+    }
 
     // Если уже авторизованы - редирект
     if (this.authManager.isAuthenticated) {

@@ -25,10 +25,11 @@ async def consult_diagram(
     db: AsyncSession = Depends(get_db),
 ):
     logger.info(
-        "[chat.consult] user=%s provider=%s model=%s chat_id=%s",
+        "[chat.consult] user=%s provider=%s model=%s mode=%s chat_id=%s",
         current_user.login,
         request.provider,
         request.model,
+        request.mode,
         request.chat_id,
     )
 
@@ -38,6 +39,7 @@ async def consult_diagram(
             user=current_user,
             provider=request.provider,
             model=request.model,
+            mode=request.mode,
             message_text=request.message,
             diagram_code=request.diagram_code,
             chat_id=request.chat_id,
