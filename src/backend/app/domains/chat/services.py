@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.domains.chat import crud, schemas
 from backend.app.domains.chat.models import Message
+from backend.app.domains.chat.prompts import DEFAULT_CHAT_MODE, build_system_prompt
 from backend.app.domains.users.models import User
 from backend.app.domains.users import settings_service
 from backend.app.integrations.llm.client import generate_and_save_response
@@ -11,13 +12,6 @@ from backend.app.domains.users.exceptions import APIKeyNotConfiguredError
 
 logger = logging.getLogger(__name__)
 PG_INT32_MAX = 2_147_483_647
-
-SYSTEM_PROMPT = """Вы — эксперт-аналитик систем OSTIS.
-Отвечайте четко, опираясь на текущую диаграмму:
-```plantuml
-{diagram_code}
-```
-"""
 
 
 def _build_chat_title(message_text: str) -> str:
@@ -41,6 +35,7 @@ async def process_chat_consultation(
     model: str | None,
     message_text: str,
     diagram_code: str,
+    mode: schemas.ChatMode = DEFAULT_CHAT_MODE,
     chat_id: int | None = None,
 ) -> tuple[int, AsyncGenerator[str, None]]:
     """
@@ -76,9 +71,12 @@ async def process_chat_consultation(
     await db.commit()
 
     history = await crud.get_chat_history(db, chat.id, limit=10)
-    messages_context = [
-        {"role": "system", "content": SYSTEM_PROMPT.format(diagram_code=diagram_code)}
-    ]
+    messages_context: list[dict[str, str]] = []
+
+    system_prompt = build_system_prompt(mode=mode, diagram_code=diagram_code)
+    if system_prompt:
+        messages_context.append({"role": "system", "content": system_prompt})
+
     messages_context.extend(history)
 
     llm_generator = generate_and_save_response(
