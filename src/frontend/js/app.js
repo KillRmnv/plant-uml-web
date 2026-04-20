@@ -177,7 +177,7 @@ class App {
     });
 
     document.getElementById("btn-render").addEventListener("click", () => {
-      this.render();
+      this.showRenderPopup();
     });
 
     document.getElementById("btn-save").addEventListener("click", () => {
@@ -205,6 +205,8 @@ class App {
       this.handleLogout();
     });
 
+    this.initRenderPopupListeners();
+
     const toolbarBtns = document.querySelectorAll(".toolbar-btn[data-mode]");
     toolbarBtns.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -214,6 +216,60 @@ class App {
         }
       });
     });
+  }
+
+  initRenderPopupListeners() {
+    const popup = document.getElementById("render-popup");
+    const input = document.getElementById("structure-name-input");
+    const closeBtn = document.getElementById("render-popup-close");
+    const cancelBtn = document.getElementById("render-popup-cancel");
+    const submitBtn = document.getElementById("render-popup-submit");
+    const errorEl = document.getElementById("render-popup-error");
+
+    closeBtn.addEventListener("click", () => this.hideRenderPopup());
+    cancelBtn.addEventListener("click", () => this.hideRenderPopup());
+
+    submitBtn.addEventListener("click", async () => {
+      const structureName = input.value.trim();
+      if (!structureName) {
+        errorEl.textContent = "Введите название структуры";
+        errorEl.style.display = "block";
+        return;
+      }
+      errorEl.style.display = "none";
+      this.hideRenderPopup();
+      await this.renderWithStructureName(structureName);
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        submitBtn.click();
+      } else if (e.key === "Escape") {
+        this.hideRenderPopup();
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (popup.style.display !== "none" && !popup.contains(e.target) && e.target.id !== "btn-render") {
+        this.hideRenderPopup();
+      }
+    });
+  }
+
+  showRenderPopup() {
+    const popup = document.getElementById("render-popup");
+    const input = document.getElementById("structure-name-input");
+    const errorEl = document.getElementById("render-popup-error");
+
+    input.value = "";
+    errorEl.style.display = "none";
+    popup.style.display = "block";
+    input.focus();
+  }
+
+  hideRenderPopup() {
+    const popup = document.getElementById("render-popup");
+    popup.style.display = "none";
   }
 
   onEditorChange(type, value) {
@@ -234,7 +290,7 @@ class App {
     this.showStatus("Settings saved", "success");
   }
 
-  async render() {
+  async renderWithStructureName(structureName) {
     const imagePanel = this.panelSystem.getPanelContent("image");
 
     const loadingHtml = `
@@ -255,10 +311,17 @@ class App {
 
     try {
       const editorType = this.editorManager.currentEditor;
-      const content = this.editorManager.getValue();
+      const renderType = editorType === "scweb" ? "scg" : editorType;
+      console.log("[App.renderWithStructureName] editorType:", editorType);
+      console.log("[App.renderWithStructureName] renderType:", renderType);
+      console.log("[App.renderWithStructureName] renderFactory strategies:", Object.keys(this.renderFactory.strategies));
+      console.log("[App.renderWithStructureName] structureName:", structureName);
+      let result;
 
-      if (!content) {
-        imagePanel.innerHTML = `
+      if (editorType === "scs") {
+        const content = this.editorManager.getValue();
+        if (!content) {
+          imagePanel.innerHTML = `
                     <div class="image-placeholder">
                         <svg class="image-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -269,16 +332,23 @@ class App {
                         <div class="image-placeholder-hint">Enter some content in the editor</div>
                     </div>
                 `;
-        return;
+          return;
+        }
+        result = await this.renderFactory.renderWithStructureName(
+          renderType,
+          content,
+          structureName,
+          { format: Config.RENDER.DEFAULT_FORMAT }
+        );
+      } else {
+        result = await this.renderFactory.renderOnlyStructureName(renderType, structureName, {
+          format: Config.RENDER.DEFAULT_FORMAT,
+        });
       }
 
-      const result = await this.renderFactory.render(editorType, content, {
-        format: Config.RENDER.DEFAULT_FORMAT,
-      });
-
-      if (result && result.image) {
+      if (result && result.image_base64) {
         imagePanel.innerHTML = `
-                    <img class="image-preview" src="data:image/png;base64,${result.image}" alt="Rendered graph">
+                    <img class="image-preview" src="data:image/png;base64,${result.image_base64}" alt="Rendered graph">
                 `;
       } else {
         imagePanel.innerHTML = `

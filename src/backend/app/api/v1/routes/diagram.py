@@ -6,12 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from backend.app.api.dependencies import get_current_user
 from backend.app.domains.users.models import User
 from backend.app.domains.diagram import schemas
-from backend.app.core.agents import generate_diagram
+from backend.app.core.agents import AgentChainExecutor
 from backend.app.domains.diagram.exceptions import AgentExecutionError
 from sc_client.client import generate_elements_by_scs
 router = APIRouter(tags=["diagram"])
 logger = logging.getLogger(__name__)
-
+executor = AgentChainExecutor()
 #TODO: add new endpoint responsible for generating diagram from scs and before that loading it into memmory
 @router.post("/generate-from-inputs", response_model=schemas.DiagramGenerateResponse)
 async def generate_diagram_from_inputs_route(
@@ -41,7 +41,7 @@ async def generate_diagram_from_inputs_route(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Некорректный SCS-код",
             )
-        plantuml_code, image_base64 = await generate_diagram(request.structure_name, request.scs_code)
+        plantuml_code, image_base64 = await executor.generate_diagram(request.structure_name)
     except AgentExecutionError as e:
         logger.error(
             "[diagram.route] AgentExecutionError user=%s detail=%s",
@@ -89,7 +89,7 @@ async def generate_diagram_route(
         request.structure_name,
     )
     try:
-        plantuml_code, image_base64 = await generate_diagram(request.structure_name)
+        plantuml_code, image_base64 = await executor.generate_diagram(request.structure_name)
     except AgentExecutionError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
     except Exception:

@@ -624,12 +624,40 @@ class ApiClient {
     return this.get("/health");
   }
 
-  /**
-   * Старый метод render (обратно совместимость)
-   * @deprecated Используйте renderScsToPlantUml или renderGwfToPlantUml
-   */
+/**
+    * Старый метод render (обратно совместимость)
+    * @deprecated Используйте renderScsToPlantUml или renderGwfToPlantUml
+    */
   async render(content, type = "scs", format = "png") {
     return this.post("/render", { content, type, format });
+  }
+
+
+  /**
+    * Генерация диаграммы из structure_name + scs_code (для текстового редактора)
+    * @param {string} structureName - Название структуры
+    * @param {string} scsCode - ScS код из редактора
+    * @param {'png'|'svg'} format - Формат изображения
+    * @returns {Promise<{plantuml_code: string, image_base64: string}>}
+    */
+  async generateDiagramFromInputs(structureName, scsCode, format = "png") {
+    return this.post("/v1/diagram/generate-from-inputs", {
+      structure_name: structureName,
+      scs_code: scsCode,
+    });
+  }
+
+
+  /**
+    * Генерация диаграммы по structure_name из SC-памяти (для графического редактора)
+    * @param {string} structureName - Название структуры
+    * @param {'png'|'svg'} format - Формат изображения
+    * @returns {Promise<{plantuml_code: string, image_base64: string}>}
+    */
+  async generateDiagram(structureName, format = "png") {
+    return this.post("/v1/diagram/generate", {
+      structure_name: structureName,
+    });
   }
 }
 

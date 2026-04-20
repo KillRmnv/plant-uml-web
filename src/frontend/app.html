@@ -112,20 +112,42 @@
 
                 <div style="flex: 1"></div>
 
-                <button
-                    class="toolbar-btn"
-                    id="btn-render"
-                    data-tooltip="Render"
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
+                <div class="render-button-wrapper">
+                    <button
+                        class="toolbar-btn"
+                        id="btn-render"
+                        data-tooltip="Render"
                     >
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                </button>
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                    </button>
+                    <div class="render-popup" id="render-popup" style="display: none;">
+                        <div class="render-popup-content">
+                            <div class="render-popup-header">
+                                <span>Введите название структуры</span>
+                                <button class="render-popup-close" id="render-popup-close">&times;</button>
+                            </div>
+                            <input
+                                type="text"
+                                id="structure-name-input"
+                                class="structure-name-input"
+                                placeholder="Structure name"
+                                autocomplete="off"
+                            />
+                            <div class="render-popup-error" id="render-popup-error" style="display: none;"></div>
+                            <div class="render-popup-actions">
+                                <button class="render-popup-cancel" id="render-popup-cancel">Отмена</button>
+                                <button class="render-popup-submit" id="render-popup-submit">Отправить</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <button
                     class="toolbar-btn"
                     id="btn-save"
