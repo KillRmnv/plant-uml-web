@@ -134,6 +134,7 @@ class App {
     this.assistantPanel = new AssistantPanel(assistantContainer, {
       apiClient: this.apiClient,
       authManager: this.authManager,
+      app: this,
     });
   }
 
@@ -347,6 +348,8 @@ class App {
           format: Config.RENDER.DEFAULT_FORMAT,
         });
       }
+
+      this.lastPlantumlCode = (result && result.plantuml_code) ? result.plantuml_code : '';
 
       if (result && result.image_base64) {
         imagePanel.innerHTML = `

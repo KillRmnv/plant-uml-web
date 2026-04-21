@@ -10,6 +10,7 @@ class AssistantPanel {
         this.authManager = options.authManager || window.authManager;
         this.chatList = null;
         this.chatWindow = null;
+        this.app = options.app || null;
         this.init();
     }
 
@@ -113,8 +114,7 @@ class AssistantPanel {
             const settings = await this.apiClient.getSettings();
             const provider = settings?.provider || 'openrouter';
 
-            // Заглушка - пока нет диаграммы
-            const diagramCode = '';
+            const diagramCode = (this.app && this.app.lastPlantumlCode) ? this.app.lastPlantumlCode : '';
 
             // Вызвать API
             const model = settings?.model || null;
