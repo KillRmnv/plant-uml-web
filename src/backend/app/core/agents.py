@@ -11,7 +11,7 @@ from sc_kpm.identifiers import ScAlias
 from sc_kpm.utils import get_element_system_identifier
 from sc_kpm.utils import get_link_content_data
 from typing import List
-import asyncio
+
 from sqlalchemy.sql.expression import null
 
 import logging
@@ -67,7 +67,7 @@ class AgentChainExecutor:
         return content.data
 
 
-    async def _start_agent(self, agent_node: ScAddr, agent_argument: ScAddr) -> tuple[ScLinkContentData, ScLinkContentData]:
+    def _start_agent(self, agent_node: ScAddr, agent_argument: ScAddr) -> tuple[ScLinkContentData, ScLinkContentData]:
         """Запускает агента и возвращает результат"""
         try:
             action_node = ScKeynodes.resolve('action', sc_type.CONST_NODE_CLASS)
@@ -88,13 +88,13 @@ class AgentChainExecutor:
             self.logger.info(f"Запущен агент: {get_element_system_identifier(agent_node)}")
             
             # Ждем завершения агента и получаем результат
-            return await self._wait_for_agent_result(agent_instance_node)
+            return self._wait_for_agent_result(agent_instance_node)
             
         except Exception as e:
             self.logger.error(f"Ошибка при запуске агента {get_element_system_identifier(agent_node)}: {e}")
             return None
 
-    async def _wait_for_agent_result(self, agent_instance_node: ScAddr) -> tuple[ScLinkContentData, ScLinkContentData]:
+    def _wait_for_agent_result(self, agent_instance_node: ScAddr) -> tuple[ScLinkContentData, ScLinkContentData]:
         """Ожидает завершения агента и возвращает результат"""
         import time
         from sc_client.client import search_by_template
@@ -160,12 +160,12 @@ class AgentChainExecutor:
                     self.logger.info("Агент завершился, но результат не найден")
                     return None
                     
-                await asyncio.sleep(check_interval)
+                time.sleep(check_interval)
                 waited_time += check_interval
                 
             except Exception as e:
                 self.logger.error(f"Ошибка при ожидании результата агента: {e}")
-                await asyncio.sleep(check_interval)
+                time.sleep(check_interval)
                 waited_time += check_interval
         
         self.logger.info(f"Таймаут ожидания результата агента ({max_wait_time} секунд)")
@@ -219,13 +219,13 @@ class AgentChainExecutor:
         return base64.b64encode(png_data).decode('utf-8')
         
         
-    async def generate_diagram(self,struct_name:str ) -> tuple[ScLinkContentData,ScLinkContentData]:
+    def generate_diagram(self,struct_name:str ) -> tuple[ScLinkContentData,ScLinkContentData]:
         self.logger.info(f"Generating diagram for struct {struct_name}")
         agent=self._identify_agent(struct_name)
         self.logger.info(f"Identify agent: {agent}")
         struct_node = ScKeynodes.resolve(struct_name, sc_type.CONST_NODE_STRUCTURE)
         self.logger.info(f"Struct node: {struct_node}")
-        plant_code,image= await self._start_agent(agent,struct_node)
+        plant_code,image=self._start_agent(agent,struct_node)
         self.logger.info(f"Agent finished")
         # if plant_code== ScLinkContentType.STRING and image== ScLinkContentType.STRING:
             # link_content_data = get_link_content_data(result)

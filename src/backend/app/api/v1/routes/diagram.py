@@ -89,7 +89,7 @@ async def generate_diagram_route(
         request.structure_name,
     )
     try:
-        plantuml_code, image_base64 = await executor.generate_diagram(request.structure_name)
+        plantuml_code, image_base64 =  executor.generate_diagram(request.structure_name)
     except AgentExecutionError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
     except Exception:
