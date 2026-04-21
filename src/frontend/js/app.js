@@ -348,8 +348,21 @@ class App {
 
       if (result && result.image_base64) {
         imagePanel.innerHTML = `
-                    <img class="image-preview" src="data:image/png;base64,${result.image_base64}" alt="Rendered graph">
+                    <div class="image-scroll-container">
+                        <div class="image-controls">
+                            <button class="zoom-in" title="Zoom In">+</button>
+                            <button class="zoom-out" title="Zoom Out">−</button>
+                            <button class="zoom-fit" title="Fit to Panel">⊡</button>
+                            <button class="zoom-100" title="Reset Zoom">1:1</button>
+                        </div>
+                        <img class="image-preview" src="data:image/png;base64,${result.image_base64}" alt="Rendered graph">
+                    </div>
                 `;
+        const container = imagePanel.querySelector('.image-scroll-container');
+        const img = container.querySelector('.image-preview');
+        this._imageZoomState = { scale: 1 };
+        this._initDragToScroll(container);
+        this._initImageZoom(container, img);
       } else {
         imagePanel.innerHTML = `
                     <div class="image-placeholder">
@@ -534,6 +547,77 @@ class App {
         statusElement.textContent = "";
       }, 3000);
     }
+  }
+
+  _initDragToScroll(container) {
+    let isDown = false;
+    let startX, startY, scrollLeft, scrollTop;
+
+    container.addEventListener('mousedown', (e) => {
+      isDown = true;
+      container.style.cursor = 'grabbing';
+      startX = e.pageX - container.offsetLeft;
+      startY = e.pageY - container.offsetTop;
+      scrollLeft = container.scrollLeft;
+      scrollTop = container.scrollTop;
+    });
+
+    container.addEventListener('mouseleave', () => {
+      isDown = false;
+      container.style.cursor = 'grab';
+    });
+
+    container.addEventListener('mouseup', () => {
+      isDown = false;
+      container.style.cursor = 'grab';
+    });
+
+    container.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - container.offsetLeft;
+      const y = e.pageY - container.offsetTop;
+      const walkX = (x - startX) * 1.5;
+      const walkY = (y - startY) * 1.5;
+      container.scrollLeft = scrollLeft - walkX;
+      container.scrollTop = scrollTop - walkY;
+    });
+  }
+
+  _initImageZoom(container, img) {
+    const state = this._imageZoomState;
+
+    container.querySelector('.zoom-in').addEventListener('click', () => {
+      state.scale = Math.min(state.scale + 0.25, 3);
+      img.style.transform = `scale(${state.scale})`;
+    });
+
+    container.querySelector('.zoom-out').addEventListener('click', () => {
+      state.scale = Math.max(state.scale - 0.25, 0.25);
+      img.style.transform = `scale(${state.scale})`;
+    });
+
+    container.querySelector('.zoom-fit').addEventListener('click', () => {
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '100%';
+      img.style.transform = 'scale(1)';
+      state.scale = 1;
+      container.style.overflow = 'auto';
+    });
+
+    container.querySelector('.zoom-100').addEventListener('click', () => {
+      img.style.maxWidth = 'none';
+      img.style.maxHeight = 'none';
+      img.style.transform = 'scale(1)';
+      state.scale = 1;
+    });
+
+    img.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      state.scale = Math.max(0.25, Math.min(3, state.scale + delta));
+      img.style.transform = `scale(${state.scale})`;
+    }, { passive: false });
   }
 }
 

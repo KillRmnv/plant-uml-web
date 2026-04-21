@@ -13,7 +13,7 @@ from sc_kpm.utils import get_link_content_data
 from typing import List
 
 from sqlalchemy.sql.expression import null
-import backend.utils.plant_uml as plant_uml
+
 import logging
 
 class AgentChainExecutor:

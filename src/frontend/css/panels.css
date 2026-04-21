@@ -258,6 +258,63 @@
     justify-content: center;
     background: #fafafa;
     padding: 16px;
+    overflow: auto;
+}
+
+.image-scroll-container {
+    overflow: auto;
+    max-width: 100%;
+    max-height: 100%;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border: 1px solid #ddd;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.image-scroll-container:active {
+    cursor: grabbing;
+}
+
+.image-preview {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.image-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+}
+
+.image-controls button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.image-controls button:hover {
+    background: #f0f0f0;
+}
+
+.image-controls button:active {
+    background: #e0e0e0;
 }
 
 /* ==========================================================================
