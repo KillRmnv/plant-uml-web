@@ -11,6 +11,7 @@ class AuthManager {
     this.isAuthenticated = false;
     this.user = null;
     this.redirectUrl = "/"; // Куда перенаправить после логина
+    this._redirectInProgress = false;
 
     this.ready = this.init();
   }
@@ -87,6 +88,12 @@ class AuthManager {
     this.isAuthenticated = false;
     this.user = null;
 
+    if (this._redirectInProgress) {
+      console.log("[AuthManager] Redirect already in progress, skipping");
+      return;
+    }
+    this._redirectInProgress = true;
+
     // Сохраняем текущий URL для редиректа после логина
     this.redirectUrl = window.location.pathname;
 
@@ -104,6 +111,12 @@ class AuthManager {
     console.log("[AuthManager] Unauthorized");
     this.isAuthenticated = false;
     this.user = null;
+
+    if (this._redirectInProgress) {
+      console.log("[AuthManager] Redirect already in progress, skipping");
+      return;
+    }
+    this._redirectInProgress = true;
 
     this.redirectUrl = window.location.pathname;
     this.redirectToAuth();
@@ -125,6 +138,7 @@ class AuthManager {
 
       this.isAuthenticated = true;
       this.user = result.user;
+      this._redirectInProgress = false;
 
       // Если rememberMe = false, токены не сохраняем в localStorage
       if (!rememberMe) {
@@ -167,11 +181,15 @@ class AuthManager {
   async logout() {
     console.log("[AuthManager] Logout");
 
+    this._redirectInProgress = true; // Блокируем повторные редиректы
+
     try {
       await this.apiClient.logout();
     } catch (error) {
       console.error("[AuthManager] Logout error:", error);
     } finally {
+      this.apiClient.clearTokens(false);
+      this.apiClient._clearTokensStorage();
       this.guestLogout();
       this.isAuthenticated = false;
       this.user = null;
@@ -185,8 +203,9 @@ class AuthManager {
   guestLogin() {
     console.log("[AuthManager] Guest login");
 
-    this.apiClient.clearTokens();
+    this.apiClient.clearTokens(false);
     this.apiClient._clearTokensStorage();
+    this.apiClient.resetAuthErrorFlag();
 
     // Устанавливаем флаг гостевого режима
     localStorage.setItem("guest_mode", "true");

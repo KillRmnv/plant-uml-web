@@ -17,6 +17,8 @@ class ApiClient {
     this.accessToken = null;
     this.refreshToken = null;
     this.currentUser = null;
+    this._isRefreshing = false;
+    this._authErrorDispatched = false;
 
     // Восстанавливаем токены из localStorage
     this._restoreTokens();
@@ -126,6 +128,24 @@ class ApiClient {
     );
   }
 
+  /**
+   * Отправка события об ошибке авторизации (только один раз)
+   * @private
+   */
+  _dispatchAuthError(type) {
+    if (!this._authErrorDispatched) {
+      this._authErrorDispatched = true;
+      this._onAuthError(type);
+    }
+  }
+
+  /**
+   * Сброс флага ошибки авторизации (при успешном логине)
+   */
+  resetAuthErrorFlag() {
+    this._authErrorDispatched = false;
+  }
+
  
 
   /**
@@ -135,6 +155,12 @@ class ApiClient {
    * @returns {Promise<any>}
    */
   async request(endpoint, options = {}) {
+    // Если уже была ошибка авторизации - не делаем запросы
+    if (this._authErrorDispatched) {
+      console.log('[API] Auth error already dispatched, skipping request:', endpoint);
+      throw new Error('Auth error - please login again');
+    }
+
     const url = `${this.baseUrl}${endpoint}`;
 
     // Не устанавливаем Content-Type для FormData
@@ -161,12 +187,26 @@ class ApiClient {
     try {
       const response = await fetch(url, config);
 
-      // 401 Unauthorized - пробуем обновить токен
+      // 401 Unauthorized
       if (response.status === 401) {
+        // Если уже идёт обновление токена - ждём или пробуем ещё раз
+        if (this._isRefreshing) {
+          // Ждём немного и пробуем ещё раз с новым токеном
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (this.accessToken) {
+            config.headers["Authorization"] = `Bearer ${this.accessToken}`;
+            const retryResponse = await fetch(url, config);
+            if (retryResponse.ok) {
+              return await this._parseResponse(retryResponse);
+            }
+          }
+        }
+
         const errorData = await response.json().catch(() => ({}));
 
         // Если токен истёк и есть refresh_token
         if (this.refreshToken && errorData.code === "TOKEN_EXPIRED") {
+          this._isRefreshing = true;
           try {
             await this.refreshAccessToken();
 
@@ -181,18 +221,20 @@ class ApiClient {
               );
             }
 
+            this._isRefreshing = false;
             return await this._parseResponse(retryResponse);
           } catch (refreshError) {
+            this._isRefreshing = false;
             // Не удалось обновить токен - очищаем сессию
             this.clearTokens();
-            this._onAuthError("session_expired");
+            this._dispatchAuthError("session_expired");
             throw new Error("Session expired. Please login again.");
           }
         }
 
-        // Другие 401 ошибки
+        // Другие 401 ошибки (нет refresh токена или другая причина)
         this.clearTokens();
-        this._onAuthError("unauthorized");
+        this._dispatchAuthError("unauthorized");
         throw new Error(errorData.message || "Unauthorized");
       }
 
@@ -270,6 +312,7 @@ class ApiClient {
     this.setTokens(result.access_token, result.refresh_token);
     this.currentUser = result.user;
     this._saveTokens();
+    this.resetAuthErrorFlag();
     console.log("[ApiClient] Login successful:", result.user?.username);
     return result;
   }
@@ -282,7 +325,9 @@ class ApiClient {
    * @returns {Promise<{user_id: string, username: string}>}
    */
   async register(username, password, email) {
-    return this.post("/auth/register", { username, password, email });
+    const result = await this.post("/auth/register", { username, password, email });
+    this.resetAuthErrorFlag();
+    return result;
   }
 
   /**
@@ -294,6 +339,8 @@ class ApiClient {
       refresh_token: this.refreshToken,
     });
     this.accessToken = result.access_token;
+    localStorage.setItem("access_token", result.access_token);
+    this.resetAuthErrorFlag();
     return result;
   }
 
@@ -306,13 +353,13 @@ class ApiClient {
       const result = await this.post("/auth/logout", {
         refresh_token: this.refreshToken,
       });
-      this.clearTokens();
+      this.clearTokens(false);
       this._clearTokensStorage();
       console.log("[ApiClient] Logout successful");
       return result;
     } catch (error) {
       // Даже если ошибка - очищаем локально
-      this.clearTokens();
+      this.clearTokens(false);
       this._clearTokensStorage();
       throw error;
     }
@@ -339,6 +386,14 @@ class ApiClient {
   }
 
   /**
+   * Проверка авторизации (безопасно - без запросов)
+   * @returns {boolean}
+   */
+  hasValidToken() {
+    return !!this.accessToken && !this._authErrorDispatched;
+  }
+
+  /**
    * Установка токенов
    * @param {string} accessToken - Access токен
    * @param {string} refreshToken - Refresh токен
@@ -351,11 +406,16 @@ class ApiClient {
 
   /**
    * Очистка токенов
+   * @param {boolean} notify - отправлять ли событие об ошибке авторизации
    */
-  clearTokens() {
+  clearTokens(notify = true) {
     this.accessToken = null;
     this.refreshToken = null;
     this.currentUser = null;
+    this._isRefreshing = false;
+    if (notify) {
+      this._authErrorDispatched = true;
+    }
   }
 
  

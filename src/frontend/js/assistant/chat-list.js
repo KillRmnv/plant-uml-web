@@ -19,7 +19,7 @@ class ChatList {
     }
 
     get isAuthenticated() {
-        return Boolean(this.apiClient?.isAuthenticated?.());
+        return Boolean(this.apiClient?.hasValidToken?.() || this.authManager?.isAuthenticated);
     }
 
     get storage() {

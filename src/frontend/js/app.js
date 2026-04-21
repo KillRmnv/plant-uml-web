@@ -176,7 +176,9 @@ class App {
       this.settingsModal.show();
     });
 
-    document.getElementById("btn-render").addEventListener("click", () => {
+    document.getElementById("btn-render").addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       this.showRenderPopup();
     });
 
@@ -360,6 +362,7 @@ class App {
                 `;
         const container = imagePanel.querySelector('.image-scroll-container');
         const img = container.querySelector('.image-preview');
+        container.classList.add('fit-mode');
         this._imageZoomState = { scale: 1 };
         this._initDragToScroll(container);
         this._initImageZoom(container, img);
@@ -598,16 +601,13 @@ class App {
     });
 
     container.querySelector('.zoom-fit').addEventListener('click', () => {
-      img.style.maxWidth = '100%';
-      img.style.maxHeight = '100%';
+      container.classList.add('fit-mode');
       img.style.transform = 'scale(1)';
       state.scale = 1;
-      container.style.overflow = 'auto';
     });
 
     container.querySelector('.zoom-100').addEventListener('click', () => {
-      img.style.maxWidth = 'none';
-      img.style.maxHeight = 'none';
+      container.classList.remove('fit-mode');
       img.style.transform = 'scale(1)';
       state.scale = 1;
     });
