@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: plant-uml-db
+    restart: always
+    env_file: .env
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=plantuml_web
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d plantuml_web"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: plant-uml-backend
+    restart: always
+    env_file: .env
+    environment:
+      # Override DATABASE_URL to point to the 'db' service instead of localhost
+      - DATABASE_URL=postgresql+asyncpg://postgres:1234@db:5432/plantuml_web
+      # Override SC_SERVER_HOST to point to host machine if SC-machine is not in docker
+      - SC_SERVER_HOST=host.docker.internal
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
