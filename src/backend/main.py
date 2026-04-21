@@ -1,6 +1,7 @@
 # Main - FastAPI entry point
 import logging
 import os
+from logging.handlers import RotatingFileHandler
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
@@ -15,7 +16,21 @@ from backend.app.api.v1.api import router as api_v1_router
 from backend.app.core.exception_handlers import setup_exception_handlers
 from backend.app.domains.users.exceptions import SettingsDomainError
 
-logging.basicConfig(level=logging.INFO)
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+log_file = os.getenv("LOG_FILE", "app.log")
+
+logging.basicConfig(
+    level=getattr(logging, log_level),
+    handlers=[
+        RotatingFileHandler(
+            log_file,
+            maxBytes=10_000_000,
+            backupCount=3
+        ),
+        logging.StreamHandler()
+    ],
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 

@@ -36,14 +36,15 @@ class AgentChainExecutor:
         )
         results = search_by_template(template)
         for result in results:
+            self.logger.info(f"Found class {get_element_system_identifier(result.get("_class"))}")
             if get_element_system_identifier(result.get("_class")) == "concept_er_diagram":
-                self.logger.debug(f"Found ER diagram for struct node {struct_node}")
+                self.logger.info(f"Found ER diagram for struct node {struct_node}")
                 return ScKeynodes.resolve("action_generate_er_diagram", sc_type.CONST_NODE_CLASS)
             elif get_element_system_identifier(result.get("_class")) == "concept_state_diagram":
-                self.logger.debug(f"Found state diagram for struct node {struct_node}")
+                self.logger.info(f"Found state diagram for struct node {struct_node}")
                 return  ScKeynodes.resolve("action_generate_state_diagram", sc_type.CONST_NODE_CLASS) 
             elif get_element_system_identifier(result.get("_class")) == "concept_use_case_diagram":
-                self.logger.debug(f"Found use case diagram for struct node {struct_node}")
+                self.logger.info(f"Found use case diagram for struct node {struct_node}")
                 return ScKeynodes.resolve("action_generate_use_case_diagram", sc_type.CONST_NODE_CLASS) 
         self.logger.error(f"Unknown diagram type for struct node {struct_node}")
         raise ValueError(f"Unknown diagram type for struct node {struct_node}")
@@ -66,7 +67,7 @@ class AgentChainExecutor:
         return content.data
 
 
-    def _start_agent(self, agent_node: ScAddr, agent_argument: ScAddr) -> ScAddr:
+    def _start_agent(self, agent_node: ScAddr, agent_argument: ScAddr) -> tuple[ScLinkContentData, ScLinkContentData]:
         """Запускает агента и возвращает результат"""
         try:
             action_node = ScKeynodes.resolve('action', sc_type.CONST_NODE_CLASS)
@@ -93,13 +94,13 @@ class AgentChainExecutor:
             self.logger.error(f"Ошибка при запуске агента {get_element_system_identifier(agent_node)}: {e}")
             return None
 
-    def _wait_for_agent_result(self, agent_instance_node: ScAddr) -> ScAddr:
+    def _wait_for_agent_result(self, agent_instance_node: ScAddr) -> tuple[ScLinkContentData, ScLinkContentData]:
         """Ожидает завершения агента и возвращает результат"""
         import time
         from sc_client.client import search_by_template
         from sc_client.models import ScTemplate
         
-        max_wait_time = 400  # секунд
+        max_wait_time = 10  # секунд
         check_interval = 0.5  # секунд
         waited_time = 0
         
@@ -112,35 +113,49 @@ class AgentChainExecutor:
                 template.quintuple(
                     agent_instance_node,
                     sc_type.VAR_ARC >> "_main_arc",
-                    sc_type.VAR_NODE >> "_result_tuple",
+                    sc_type.VAR_NODE >> "_result_node",
                     sc_type.VAR_PERM_POS_ARC >> "_rel_arc",
                     nrel_result
                 )
-                
+                self.logger.info("Found agent result node");
                 results = search_by_template(template)
+                template = ScTemplate()
+                template.triple(
+                    results[0].get("_result_node"),
+                    sc_type.VAR_PERM_POS_ARC >> "_arc",
+                    sc_type.NODE_TUPLE >> "_result_tuple"
+                )
+                results = search_by_template(template)
+                
                 
                 if results:
                     result_tuple_node = results[0].get("_result_tuple")
                     if result_tuple_node and result_tuple_node.is_valid():
-                        self.logger.info(f"Агент завершился, найден результат: {result_tuple_node}")
+                        self.logger.info("Found agent result tuple")
                         template = ScTemplate()
                         template.triple(
-                            result_node,
-                            sc_type.VAR_ARC >> "_arc",
-                            sc_type.VAR_NODE_LINK >> "_link"
+                            result_tuple_node,
+                            sc_type.ARC >> "_arc",
+                            sc_type.NODE >> "_link"
                         )
                         results = search_by_template(template)
                         plantCode = None
+                        image=None
+                        self.logger.info(f"Found {len(results)} results")
                         for result in results:
                             link_node = result.get("_link")
-                            if not plantCode or len(get_link_content_data(link_node)) < len(get_link_content_data(plantCode)):
-                                plantCode = link_node
-                        if plantCode and plantCode.is_valid():
+                            data=get_link_content_data(link_node)
+                            self.logger.info(f"Found link node len: {len(data)}")
+                            
+                            if not plantCode or len(data) < len(plantCode):
+                                plantCode = data
+                            else:
+                                image = data
+                        if plantCode and image:
                             self.logger.info(f"Найден результат: {plantCode}")
-                            return plantCode
-                        return result_tuple_node
+                            return (plantCode,image)
+                        return None
                 
-                # Проверяем статус завершения агента
                 if self._is_agent_finished(agent_instance_node):
                     self.logger.info("Агент завершился, но результат не найден")
                     return None
@@ -204,21 +219,19 @@ class AgentChainExecutor:
         return base64.b64encode(png_data).decode('utf-8')
         
         
-    def generate_diagram(self,struct_name:str ) -> tuple[ScLinkContentData,str]:
+    def generate_diagram(self,struct_name:str ) -> tuple[ScLinkContentData,ScLinkContentData]:
         self.logger.info(f"Generating diagram for struct {struct_name}")
         agent=self._identify_agent(struct_name)
         self.logger.info(f"Identify agent: {agent}")
         struct_node = ScKeynodes.resolve(struct_name, sc_type.CONST_NODE_STRUCTURE)
         self.logger.info(f"Struct node: {struct_node}")
-        result=self._start_agent(agent,struct_node)
-        self.logger.info(f"Agent result: {result}")
-        link_content = get_link_content(result)[0].content_type 
-        self.logger.info(f"Link content: {link_content}")
-        if link_content== ScLinkContentType.STRING:
-            link_content_data = get_link_content_data(result)
-            image_bytes = plant_uml.plantuml_to_image(link_content_data)
-            return link_content_data,self._encode_png_into_base64(image_bytes)
-        else:
-            raise ValueError(f"Unsupported link content type: {link_content}")
+        plant_code,image=self._start_agent(agent,struct_node)
+        self.logger.info(f"Agent finished")
+        # if plant_code== ScLinkContentType.STRING and image== ScLinkContentType.STRING:
+            # link_content_data = get_link_content_data(result)
+            # image_bytes = plant_uml.plantuml_to_image(link_content_data)
+        return plant_code,image
+        # else:
+        #     raise ValueError(f"Unsupported link content type: {plant_code}, {image}")
 
         
