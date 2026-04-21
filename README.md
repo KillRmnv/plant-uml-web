@@ -114,6 +114,71 @@ cp .env.example .env
 PYTHONPATH=src .venv/bin/python -m backend.main
 ```
 
+### 5. Сборка и запуск с Docker
+
+#### Требования
+- Docker 20.10+
+- Docker Compose v2+
+
+#### Быстрый старт
+
+```bash
+# 1. Клонирование + submodules
+git clone https://github.com/KillRmnv/plant-uml-web.git
+cd plant-uml-web
+git submodule update --init --recursive
+
+# 2. Настройка .env
+cp .env.example .env
+```
+
+#### Обязательные настройки для Docker
+
+**`.env`** — добавить/изменить:
+
+```bash
+# Подключение к БД через Docker Compose
+DATABASE_URL=postgresql+asyncpg://postgres:1234@db:5432/plantuml_web
+
+# Подключение к SC-machine (host машина)
+SC_SERVER_HOST=host.docker.internal
+
+# Секретный ключ для JWT
+SECRET_KEY=your-secret-key-here
+```
+
+**Настройка SC-machine (ostis-example-app.ini)** — если SC-machine запущен отдельно:
+
+```ini
+[sc-server]
+host = 0.0.0.0
+```
+
+> **Важно:** Если SC-machine работает на host машине (не в Docker), в конфиге `ostis-example-app.ini` нужно указать `host = 0.0.0.0`, чтобы контейнер мог подключиться через `host.docker.internal`.
+
+#### Запуск
+
+```bash
+# Сборка и запуск всех сервисов
+docker compose up --build
+
+# Или в фоновом режиме
+docker compose up --build -d
+```
+
+#### Остановка
+
+```bash
+docker compose down
+```
+
+#### Доступные сервисы
+
+| Сервис | Порт | Описание |
+|--------|------|----------|
+| Backend API | 8000 | FastAPI приложение |
+| PostgreSQL | 5432 | База данных |
+
 ---
 
 ## Конфигурация
