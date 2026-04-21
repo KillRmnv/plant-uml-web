@@ -36,7 +36,7 @@ class AgentChainExecutor:
         )
         results = search_by_template(template)
         for result in results:
-            self.logger.info(f"Found class {get_element_system_identifier(result.get("_class"))}")
+            self.logger.info(f"Found class {get_element_system_identifier(result.get('_class'))}")
             if get_element_system_identifier(result.get("_class")) == "concept_er_diagram":
                 self.logger.info(f"Found ER diagram for struct node {struct_node}")
                 return ScKeynodes.resolve("action_generate_er_diagram", sc_type.CONST_NODE_CLASS)

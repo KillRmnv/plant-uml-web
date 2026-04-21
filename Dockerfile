@@ -8,7 +8,8 @@ COPY external/sc-web ./external/sc-web
 RUN cd external/sc-web && npm install && npm run build
 
 # --- Stage 2: Backend ---
-FROM python:3.11-slim
+# Using the user's specific Python version
+FROM python:3.14-slim
 
 # Install system dependencies for PostgreSQL and building Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -18,15 +19,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# Copy requirements-lock first to leverage Docker cache
+COPY requirements-lock.txt .
 
 # Copy external libraries needed for installation
 COPY external/py-sc-client ./external/py-sc-client
 COPY external/py-sc-kpm ./external/py-sc-kpm
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install fixed dependencies from lock file
+RUN pip install --no-cache-dir -r requirements-lock.txt
+
+# Install local libraries as editable (or just install them)
+RUN pip install --no-cache-dir ./external/py-sc-client ./external/py-sc-kpm
 
 # Copy the rest of the application code
 COPY src ./src
