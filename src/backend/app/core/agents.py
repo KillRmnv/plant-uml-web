@@ -67,7 +67,7 @@ class AgentChainExecutor:
         return content.data
 
 
-    def _start_agent(self, agent_node: ScAddr, agent_argument: ScAddr) -> tuple[ScLinkContentData, ScLinkContentData]:
+    async def _start_agent(self, agent_node: ScAddr, agent_argument: ScAddr) -> tuple[ScLinkContentData, ScLinkContentData]:
         """Запускает агента и возвращает результат"""
         try:
             action_node = ScKeynodes.resolve('action', sc_type.CONST_NODE_CLASS)
@@ -88,7 +88,7 @@ class AgentChainExecutor:
             self.logger.info(f"Запущен агент: {get_element_system_identifier(agent_node)}")
             
             # Ждем завершения агента и получаем результат
-            return self._wait_for_agent_result(agent_instance_node)
+            return await self._wait_for_agent_result(agent_instance_node)
             
         except Exception as e:
             self.logger.error(f"Ошибка при запуске агента {get_element_system_identifier(agent_node)}: {e}")
