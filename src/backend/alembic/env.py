@@ -22,6 +22,7 @@ from backend.app.config import settings
 from backend.app.db.database import Base
 
 from backend.app.domains.users.models import *
+from backend.app.domains.chat.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -41,7 +41,7 @@ async def generate_diagram_from_inputs_route(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Некорректный SCS-код",
             )
-        plantuml_code, image_base64 = await executor.generate_diagram(request.structure_name)
+        plantuml_code, image_base64 =  executor.generate_diagram(request.structure_name)
     except AgentExecutionError as e:
         logger.error(
             "[diagram.route] AgentExecutionError user=%s detail=%s",

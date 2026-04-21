@@ -2,12 +2,6 @@
 import sys
 from pathlib import Path
 
-# Add external packages to path
-BASE_DIR = Path(__file__).resolve().parent
-EXTERNAL_PATH = BASE_DIR.parent.parent / "external"
-sys.path.insert(0, str(EXTERNAL_PATH / "py-sc-client" / "src"))
-sys.path.insert(0, str(EXTERNAL_PATH / "py-sc-kpm" / "src"))
-
 import logging
 from sc_client import client
 from sc_client.constants.exceptions import ServerError
@@ -15,6 +9,12 @@ from sc_client.sc_keynodes import ScKeynodes
 
 from backend.app.integrations.keynodes import KeynodeSysIdentifiers
 from backend.app.integrations.scs_loader import load_scs_fragments
+
+# Add external packages to path
+BASE_DIR = Path(__file__).resolve().parent
+EXTERNAL_PATH = BASE_DIR.parent.parent / "external"
+sys.path.insert(0, str(EXTERNAL_PATH / "py-sc-client" / "src"))
+sys.path.insert(0, str(EXTERNAL_PATH / "py-sc-kpm" / "src"))
 
 logger = logging.getLogger()
 
@@ -47,8 +47,13 @@ def init_sc_client(
         logger.info("Resolve keynodes")
         ScKeynodes().resolve_identifiers([KeynodeSysIdentifiers])
 
+    def reconnect():
+        logger.info(f"Reconnecting to SC server: {server_url}")
+        client.connect(server_url)
+
     client.set_error_handler(on_error)
     client.set_reconnect_handler(
+        reconnect_handler=reconnect,
         post_reconnect_handler=post_reconnect,
         reconnect_retries=reconnect_retries,
         reconnect_retry_delay=reconnect_retry_delay,

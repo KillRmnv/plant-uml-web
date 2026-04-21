@@ -39,6 +39,10 @@ COPY external ./external
 # Copy the built static files from the frontend-builder stage
 COPY --from=frontend-builder /app/external/sc-web/client/static ./external/sc-web/client/static
 
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Set environment variables
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
@@ -47,5 +51,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Expose FastAPI port
 EXPOSE 8000
 
+ENTRYPOINT ["/entrypoint.sh"]
 # Command to run the application
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
