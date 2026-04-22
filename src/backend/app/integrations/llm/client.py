@@ -43,6 +43,7 @@ PROVIDER_CONFIG: dict[str, dict[str, Any]] = {
     },
 }
 
+
 def get_provider_config(provider: str) -> dict[str, Any] | None:
     return PROVIDER_CONFIG.get(provider)
 
@@ -59,7 +60,9 @@ def _format_sse(data: dict[str, Any] | str) -> str:
     return f"data: {payload}\n\n"
 
 
-def _build_rate_limit_message(provider: str, model_name: str, exc: RateLimitError) -> str:
+def _build_rate_limit_message(
+    provider: str, model_name: str, exc: RateLimitError
+) -> str:
     provider_name = PROVIDER_CONFIG.get(provider, {}).get("name", provider)
     base_message = (
         f"[{provider_name}] Модель временно недоступна из-за rate limit. "
@@ -240,6 +243,7 @@ async def generate_and_save_response(
 
     full_response_chunks: list[str] = []
     chunk_count = 0
+    complete_text = ""
 
     try:
         async for content in _stream_provider_response(
@@ -258,7 +262,13 @@ async def generate_and_save_response(
             full_response_chunks.append(content)
             yield _format_sse({"content": content})
 
-        logger.info("[LLM] complete provider=%s chunks=%s", provider, chunk_count)
+        complete_text = "".join(full_response_chunks)
+        logger.info(
+            "[LLM] complete provider=%s chunks=%s chars=%s",
+            provider,
+            chunk_count,
+            len(complete_text),
+        )
 
     except RateLimitError as exc:
         logger.warning("[LLM] rate_limited provider=%s model=%s", provider, model_name)
@@ -267,21 +277,17 @@ async def generate_and_save_response(
         yield _format_sse({"error": error_msg})
 
     except Exception:
-        logger.exception("[LLM] error provider=%s", provider)
+        logger.exception("[LLM] error provider=%s model=%s", provider, model_name)
         error_msg = f"[Ошибка генерации ответа от {config['name']}.]"
         full_response_chunks.append(error_msg)
         yield _format_sse({"error": error_msg})
 
     finally:
         yield _format_sse("[DONE]")
-
+        logger.info(
+            "[LLM] response_end chat_id=%s total_chars=%s", chat_id, len(complete_text)
+        )
         if full_response_chunks:
-            complete_text = "".join(full_response_chunks)
-            logger.info(
-                "[LLM] saved chat_id=%s chars=%s",
-                chat_id,
-                len(complete_text),
-            )
             assistant_msg = Message(
                 chat_id=chat_id,
                 role="assistant",
@@ -289,3 +295,61 @@ async def generate_and_save_response(
             )
             db.add(assistant_msg)
             await db.commit()
+
+
+MODELS_API_ENDPOINTS: dict[str, str] = {
+    "openai": "https://api.openai.com/v1/models",
+    "anthropic": "https://api.anthropic.com/v1/models",
+    "mistral": "https://api.mistral.ai/v1/models",
+    "openrouter": "https://openrouter.ai/api/v1/models",
+    "localai": "http://localhost:8080/v1/models",
+}
+
+
+async def list_provider_models(provider: str) -> list[str]:
+    """Fetch available models for a provider from its API."""
+    config = PROVIDER_CONFIG.get(provider)
+    if not config:
+        return [config.get("default_model", "")] if config else []
+
+    default_model = config.get("default_model")
+    api_url = MODELS_API_ENDPOINTS.get(provider)
+    if not api_url:
+        return [default_model] if default_model else []
+
+    try:
+        headers = {"Content-Type": "application/json"}
+        if provider == "anthropic":
+            headers["anthropic-version"] = "2023-06-01"
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                api_url,
+                headers=headers,
+                timeout=10.0,
+            )
+            if response.status_code != 200:
+                logger.warning(
+                    f"[list_provider_models] {provider} returned {response.status_code}"
+                )
+                return [default_model] if default_model else []
+
+            data = response.json()
+
+        if provider == "openai" or provider == "openrouter" or provider == "localai":
+            models_list = data.get("data", [])
+            return [m["id"] for m in models_list if m.get("id")]
+        elif provider == "anthropic":
+            models_list = data.get("models", [])
+            return [m["id"] for m in models_list if m.get("id")]
+        elif provider == "mistral":
+            models_list = data.get("data", [])
+            return [m.get("id", m.get("name", "")) for m in models_list]
+
+        return [default_model] if default_model else []
+
+    except Exception:
+        logger.warning(
+            f"[list_provider_models] Failed to fetch from {provider}, using default"
+        )
+        return [default_model] if default_model else []

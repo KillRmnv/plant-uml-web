@@ -21,9 +21,10 @@ from backend.app.api.v1.routes.chat import router as chat_router
 
 router.include_router(chat_router, prefix="/chat", tags=["chat"])
 
-from backend.app.api.v1.routes.settings import router as settings_router
-
-router.include_router(settings_router, tags=["settings"])
-
 from backend.app.api.v1.routes.diagram import router as diagram_router
+
 router.include_router(diagram_router, prefix="/diagram", tags=["diagram"])
+
+from backend.app.api.v1.routes.assistant_info import router as assistant_info_router
+
+router.include_router(assistant_info_router, prefix="", tags=["assistant"])

@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from backend.app.domains.users.exceptions import (
-    APIKeyNotConfiguredError,
     InvalidCredentialsError,
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -33,13 +32,6 @@ def setup_exception_handlers(app: FastAPI) -> None:
     async def user_not_found_handler(request: Request, exc: UserNotFoundError):
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND, content={"detail": exc.message}
-        )
-
-    @app.exception_handler(APIKeyNotConfiguredError)
-    async def api_key_handler(request: Request, exc: APIKeyNotConfiguredError):
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"detail": f"API ключ не настроен для провайдера '{exc.provider}'."},
         )
 
     @app.exception_handler(ChatAccessDeniedError)

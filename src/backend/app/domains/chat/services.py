@@ -6,9 +6,7 @@ from backend.app.domains.chat import crud, schemas
 from backend.app.domains.chat.models import Message
 from backend.app.domains.chat.prompts import DEFAULT_CHAT_MODE, build_system_prompt
 from backend.app.domains.users.models import User
-from backend.app.domains.users import settings_service
 from backend.app.integrations.llm.client import generate_and_save_response
-from backend.app.domains.users.exceptions import APIKeyNotConfiguredError
 
 logger = logging.getLogger(__name__)
 PG_INT32_MAX = 2_147_483_647
@@ -35,6 +33,7 @@ async def process_chat_consultation(
     model: str | None,
     message_text: str,
     diagram_code: str,
+    api_key: str,
     mode: schemas.ChatMode = DEFAULT_CHAT_MODE,
     chat_id: int | None = None,
 ) -> tuple[int, AsyncGenerator[str, None]]:
@@ -43,9 +42,6 @@ async def process_chat_consultation(
 
     Возвращает:
         tuple[int, AsyncGenerator]: ID чата и генератор потока ответа LLM.
-
-    Raises:
-        APIKeyNotConfiguredError: Если у пользователя нет API ключа для провайдера.
     """
     normalized_chat_id = _normalize_chat_id(chat_id)
     if chat_id != normalized_chat_id:
@@ -55,7 +51,14 @@ async def process_chat_consultation(
             normalized_chat_id,
         )
 
-    api_key = await settings_service.get_api_key(db, user.id, provider)
+    logger.info(
+        "[chat.service] diagram_code=%s chars received",
+        len(diagram_code),
+    )
+    logger.debug(
+        "[chat.service] diagram_code preview: %s",
+        diagram_code[:200] if diagram_code else "(empty)",
+    )
 
     chat = await crud.get_or_create_chat(db, user.id, normalized_chat_id)
     if (

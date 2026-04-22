@@ -157,10 +157,11 @@ class ChatWindow {
             ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'
             : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 2a10 10 0 0 1 10 10h-10V2z"></path></svg>';
         
+        const formatted = this.formatContent(content);
         message.innerHTML = `
             <div class="message-avatar">${avatarIcon}</div>
             <div class="message-content">
-                <p>${this.escapeHtml(content)}</p>
+                <div class="message-text">${formatted}</div>
                 <div class="message-time">${this.formatTime(new Date())}</div>
             </div>
         `;
@@ -199,16 +200,20 @@ class ChatWindow {
         this.isTyping = false;
     }
 
+formatContent(text) {
+        const escaped = this.escapeHtml(text);
+        return escaped.replace(/\n/g, '<br>');
+    }
+
     updateLastAssistantMessage(content) {
         this.hideTyping();
         const lastMessage = this.messagesContainer.querySelector('.message.assistant:last-child');
         if (lastMessage) {
-            const contentEl = lastMessage.querySelector('.message-content p');
+            const contentEl = lastMessage.querySelector('.message-text');
             if (contentEl) {
-                contentEl.textContent = content;
+                contentEl.innerHTML = this.formatContent(content);
             }
         } else {
-            // Создать новое сообщение если нет
             this.addMessage('assistant', content);
         }
         this.scrollToBottom();

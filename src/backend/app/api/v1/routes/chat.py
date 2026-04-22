@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.db.database import get_db
 from backend.app.api.dependencies import get_current_user
 from backend.app.domains.users.models import User
-from backend.app.domains.users.exceptions import APIKeyNotConfiguredError
 from backend.app.domains.chat import schemas, services
 from backend.app.domains.chat.exceptions import (
     ChatAccessDeniedError,
@@ -25,12 +24,13 @@ async def consult_diagram(
     db: AsyncSession = Depends(get_db),
 ):
     logger.info(
-        "[chat.consult] user=%s provider=%s model=%s mode=%s chat_id=%s",
+        "[chat.consult] user=%s provider=%s model=%s mode=%s chat_id=%s diagram_code=%s chars",
         current_user.login,
         request.provider,
         request.model,
         request.mode,
         request.chat_id,
+        len(request.diagram_code),
     )
 
     try:
@@ -39,15 +39,11 @@ async def consult_diagram(
             user=current_user,
             provider=request.provider,
             model=request.model,
-            mode=request.mode,
             message_text=request.message,
             diagram_code=request.diagram_code,
+            api_key=request.api_key,
+            mode=request.mode,
             chat_id=request.chat_id,
-        )
-    except APIKeyNotConfiguredError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"API ключ не настроен для провайдера '{e.provider}'.",
         )
     except ChatAccessDeniedError:
         raise HTTPException(
@@ -62,7 +58,9 @@ async def consult_diagram(
     except HTTPException:
         raise
     except Exception:
-        logger.exception("[chat.consult] Unexpected error for user=%s", current_user.login)
+        logger.exception(
+            "[chat.consult] Unexpected error for user=%s", current_user.login
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось обработать запрос.",
@@ -82,7 +80,9 @@ async def get_chats(
     try:
         return await services.list_user_chats(db, current_user.id)
     except Exception:
-        logger.exception("[chat.get_chats] Unexpected error for user=%s", current_user.login)
+        logger.exception(
+            "[chat.get_chats] Unexpected error for user=%s", current_user.login
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось получить список чатов.",
@@ -98,14 +98,18 @@ async def create_chat(
     try:
         return await services.create_user_chat(db, current_user.id, request.title)
     except Exception:
-        logger.exception("[chat.create_chat] Unexpected error for user=%s", current_user.login)
+        logger.exception(
+            "[chat.create_chat] Unexpected error for user=%s", current_user.login
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось создать чат.",
         )
 
 
-@router.get("/chats/{chat_id}/messages", response_model=list[schemas.ChatMessageResponse])
+@router.get(
+    "/chats/{chat_id}/messages", response_model=list[schemas.ChatMessageResponse]
+)
 async def get_chat_messages(
     chat_id: int,
     current_user: User = Depends(get_current_user),
@@ -124,7 +128,9 @@ async def get_chat_messages(
             detail="Чат не найден.",
         )
     except Exception:
-        logger.exception("[chat.get_messages] Unexpected error for user=%s", current_user.login)
+        logger.exception(
+            "[chat.get_messages] Unexpected error for user=%s", current_user.login
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось получить сообщения чата.",
@@ -150,7 +156,9 @@ async def delete_chat(
             detail="Чат не найден.",
         )
     except Exception:
-        logger.exception("[chat.delete] Unexpected error for user=%s", current_user.login)
+        logger.exception(
+            "[chat.delete] Unexpected error for user=%s", current_user.login
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось удалить чат.",
@@ -180,7 +188,9 @@ async def update_chat_title(
             detail="Чат не найден.",
         )
     except Exception:
-        logger.exception("[chat.update] Unexpected error for user=%s", current_user.login)
+        logger.exception(
+            "[chat.update] Unexpected error for user=%s", current_user.login
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось обновить чат.",

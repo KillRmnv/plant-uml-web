@@ -33,9 +33,6 @@ async def generate_diagram_from_inputs_route(
     )
 
     try:
-        # Делегируем логику генерации в core.agents
-        # Ожидаем: (описание_результата: str, image_base64: str)
-        # 
         if not generate_elements_by_scs([request.scs_code])[0]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -53,7 +50,6 @@ async def generate_diagram_from_inputs_route(
             detail=f"Ошибка агента генерации: {str(e)}",
         )
     except ValueError as e:
-        # Например, некорректный формат входных данных
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Некорректные входные данные: {str(e)}",

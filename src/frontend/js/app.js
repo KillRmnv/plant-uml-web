@@ -157,9 +157,9 @@ class App {
     const modalContainer = document.getElementById("modal-container");
     this.settingsModal = new SettingsModal(modalContainer, {
       onSave: (settings) => this.onSettingsSave(settings),
+      apiClient: this.apiClient,
     });
-    // Connect API client to settings modal
-    if (this.apiClient) {
+    if (!this.apiClient) {
       this.settingsModal.setApiClient(this.apiClient);
     }
   }

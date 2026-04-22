@@ -14,7 +14,6 @@ from backend.app.integrations.deps import init_sc_client, disconnect
 from backend.app.api.v1.api import router as api_v1_router
 
 from backend.app.core.exception_handlers import setup_exception_handlers
-from backend.app.domains.users.exceptions import SettingsDomainError
 
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 log_file = os.getenv("LOG_FILE", "app.log")
@@ -22,14 +21,10 @@ log_file = os.getenv("LOG_FILE", "app.log")
 logging.basicConfig(
     level=getattr(logging, log_level),
     handlers=[
-        RotatingFileHandler(
-            log_file,
-            maxBytes=10_000_000,
-            backupCount=3
-        ),
-        logging.StreamHandler()
+        RotatingFileHandler(log_file, maxBytes=10_000_000, backupCount=3),
+        logging.StreamHandler(),
     ],
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -74,14 +69,6 @@ async def redirect_api_v1(request: Request, call_next):
 
 
 setup_exception_handlers(app)
-
-
-@app.exception_handler(SettingsDomainError)
-async def settings_domain_error_handler(request: Request, exc: SettingsDomainError):
-    return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        content={"detail": str(exc)},
-    )
 
 # CORS
 app.add_middleware(

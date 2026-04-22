@@ -10,16 +10,15 @@ class SettingsModal {
         this.models = [];
         this.settings = {};
         this.apiClient = null;
-        this.init();
+        this._initPromise = null;
+        this._rendered = false;
+        if (options.apiClient) {
+            this.setApiClient(options.apiClient);
+        }
     }
 
     setApiClient(apiClient) {
         this.apiClient = apiClient;
-    }
-
-    getSettingsStorageKey() {
-        const userId = this.apiClient?.currentUser?.id || 'anonymous';
-        return `${Config.STORAGE_KEYS.SETTINGS}_${userId}`;
     }
 
     clearLegacySettingsStorage() {
@@ -31,89 +30,39 @@ class SettingsModal {
     }
 
     async init() {
-        await this.loadSettingsFromApi();
-        this.render();
-    }
-
-    async loadSettingsFromApi() {
-        if (!this.apiClient) {
-            console.warn('[SettingsModal] API client not set, using localStorage');
-            this.loadSettingsLocal();
-            return;
+        if (this._initPromise) {
+            return this._initPromise;
         }
-
-        try {
-            try {
-                this.providers = await this.apiClient.getProviders();
-            } catch (providerError) {
-                console.warn('[SettingsModal] Failed to load providers from API:', providerError);
-                this.providers = [];
-            }
-
-            const settings = await this.apiClient.getSettings();
-            this.settings = {
-                provider: settings.provider || '',
-                model: settings.model || '',
-                autoSave: settings.auto_save !== false,
-                apiKey: settings.api_keys?.[settings.provider] || '',
-                api_keys: settings.api_keys || {}
-            };
-            this.clearLegacySettingsStorage();
-            console.log('[SettingsModal] Settings loaded from API:', this.settings);
-        } catch (e) {
-            console.warn('[SettingsModal] Failed to load settings from API:', e);
+        this._initPromise = (async () => {
             this.loadSettingsLocal();
-        }
+            this.render();
+        })();
+        await this._initPromise;
     }
 
     loadSettingsLocal() {
         try {
-            const saved = localStorage.getItem(this.getSettingsStorageKey());
+            const saved = localStorage.getItem(Config.STORAGE_KEYS.SETTINGS);
             if (saved) {
                 this.settings = JSON.parse(saved);
+            } else {
+                this.settings = {
+                    provider: Config.DEFAULTS.PROVIDER || 'openrouter',
+                    model: Config.DEFAULTS.MODEL || '',
+                    autoSave: true,
+                    api_keys: {}
+                };
             }
+            console.log('[SettingsModal] Settings loaded from localStorage:', this.settings);
         } catch (e) {
             console.warn('[SettingsModal] Failed to load settings:', e);
         }
     }
 
-    async saveSettingsToApi() {
-        if (!this.apiClient) {
-            console.warn('[SettingsModal] API client not set, using localStorage');
-            this.saveSettingsLocal();
-            return;
-        }
-
+    async saveSettingsLocal() {
         try {
-            const apiKeys = { ...(this.settings.api_keys || {}) };
-            if (this.settings.provider) {
-                if (this.settings.apiKey) {
-                    apiKeys[this.settings.provider] = this.settings.apiKey;
-                } else {
-                    delete apiKeys[this.settings.provider];
-                }
-            }
-
-            await this.apiClient.saveSettings({
-                provider: this.settings.provider || null,
-                model: this.settings.model || null,
-                auto_save: this.settings.autoSave,
-                api_keys: Object.keys(apiKeys).length > 0 ? apiKeys : null
-            });
-            console.log('[SettingsModal] Settings saved to API');
-
-            // Also save to localStorage as backup
-            this.saveSettingsLocal();
-        } catch (e) {
-            console.warn('[SettingsModal] Failed to save settings to API:', e);
-            this.saveSettingsLocal();
-        }
-    }
-
-    saveSettingsLocal() {
-        try {
-            localStorage.setItem(this.getSettingsStorageKey(), JSON.stringify(this.settings));
-            this.clearLegacySettingsStorage();
+            localStorage.setItem(Config.STORAGE_KEYS.SETTINGS, JSON.stringify(this.settings));
+            console.log('[SettingsModal] Settings saved to localStorage');
         } catch (e) {
             console.warn('[SettingsModal] Failed to save settings:', e);
         }
@@ -241,13 +190,13 @@ class SettingsModal {
         const apiKeyInput = this.modalContainer.querySelector('#api-key');
         apiKeyInput.addEventListener('input', () => {
             this.settings.apiKey = apiKeyInput.value;
-            // Обновляем api_keys для активного провайдера
             if (this.settings.provider) {
                 if (!this.settings.api_keys) {
                     this.settings.api_keys = {};
                 }
                 this.settings.api_keys[this.settings.provider] = apiKeyInput.value;
             }
+            this.saveSettingsLocal();
         });
         
         const apiKeyToggle = this.modalContainer.querySelector('.api-key-toggle');
@@ -363,9 +312,11 @@ class SettingsModal {
 
                 models.forEach(model => {
                     const option = document.createElement('option');
-                    option.value = model.id;
-                    option.textContent = model.name || model.id;
-                    if (this.settings.model === model.id) {
+                    const modelId = typeof model === 'string' ? model : model.id;
+                    const modelName = typeof model === 'string' ? model : (model.name || model.id);
+                    option.value = modelId;
+                    option.textContent = modelName;
+                    if (this.settings.model === modelId) {
                         option.selected = true;
                     }
                     modelSelect.appendChild(option);
@@ -386,10 +337,15 @@ class SettingsModal {
         modelSelect.disabled = true;
     }
 
-    show() {
+    async show() {
+        if (this._initPromise) {
+            await this._initPromise;
+        } else if (this.apiClient || !this._rendered) {
+            await this.init();
+        } else {
+            return;
+        }
         this.modalContainer.querySelector('#settings-overlay').classList.add('active');
-        // Reload settings when showing modal
-        this.loadSettingsFromApi().then(() => this.populateProviders());
     }
 
     hide() {
@@ -397,12 +353,7 @@ class SettingsModal {
     }
 
     async save() {
-        await this.saveSettingsToApi();
-
-        // После сохранения - перезагрузить настройки и обновить модели
-        await this.loadSettingsFromApi();
-        await this.updateModelSelect();
-
+        await this.saveSettingsLocal();
         this.options.onSave?.(this.settings);
         this.hide();
     }

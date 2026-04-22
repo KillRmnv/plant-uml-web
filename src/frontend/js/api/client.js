@@ -518,7 +518,7 @@ class ApiClient {
    * @returns {Promise<Response>} - SSE поток
    */
   async sendMessage(chatId, message, mode = "assistant", options = {}) {
-    const { provider = 'openrouter', model = null, diagram_code = '' } = options;
+    const { provider = 'openrouter', model = null, diagram_code = '', api_key = '' } = options;
 
     const url = `${this.baseUrl}/chat/consult`;
 
@@ -528,6 +528,7 @@ class ApiClient {
       mode,
       message,
       diagram_code,
+      api_key,
       chat_id: chatId,
     };
 
@@ -550,52 +551,6 @@ class ApiClient {
     return response;
   }
 
-  /**
-   * POST with custom body (for streaming)
-   * @private
-   */
-  async postWithBody(endpoint, data, allowStreaming = false) {
-    const url = `${this.baseUrl}${endpoint}`;
-
-    if (this.accessToken) {
-      // Загружаем настройки для получения API ключа
-      let apiKey = null;
-      try {
-        const settings = await this.getSettings();
-        apiKey = settings.api_keys?.[settings.provider];
-      } catch (e) {
-        console.warn('[ApiClient] Failed to get settings for API key:', e);
-      }
-
-      const config = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${this.accessToken}`,
-        },
-        body: JSON.stringify(data),
-      };
-
-      console.log('[ApiClient] Sending to endpoint:', endpoint, 'data:', data);
-
-      const response = await fetch(url, config);
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || `HTTP ${response.status}`);
-      }
-
-      return response;
-    }
-
-    throw new Error("No access token");
-  }
-
-  /**
-   * Удалить чат
-   * @param {string} chatId - ID чата
-   * @returns {Promise<{success: boolean}>}
-   */
   async deleteChat(chatId) {
     return this.delete(`/chat/chats/${chatId}`);
   }
@@ -626,6 +581,34 @@ class ApiClient {
    */
   async getProviders() {
     return this.get("/assistant/providers");
+  }
+  
+  /**
+   * Получить модели для провайдера
+   * @param {string} provider - ID провайдера
+   * @returns {Promise<Array<string>>}
+   */
+  async getModels(provider) {
+    return this.get(
+      `/assistant/models?provider=${encodeURIComponent(provider)}`,
+    );
+  }
+  
+  /**
+   * Сохранить сессию текущего пользователя
+   * @param {Object} sessionData - Данные сессии
+   * @returns {Promise<{success: boolean, session_id: string}>}
+   */
+  async saveSession(sessionData) {
+    return this.post("/session/save", sessionData);
+  }
+  
+  /**
+   * Загрузить сессию текущего пользователя
+   * @returns {Promise<{editor_type: string, editor_content: string, timestamp: string}>}
+   */
+  async loadSession() {
+    return this.get("/session/load");
   }
 
   /**

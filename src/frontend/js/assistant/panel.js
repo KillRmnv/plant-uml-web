@@ -110,14 +110,16 @@ class AssistantPanel {
         this.chatWindow.showTyping();
 
         try {
-            // Получить настройки
-            const settings = await this.apiClient.getSettings();
-            const provider = settings?.provider || 'openrouter';
+            // Получить настройки из localStorage
+            const settings = JSON.parse(localStorage.getItem(Config.STORAGE_KEYS.SETTINGS) || '{}');
+            const provider = settings.provider || 'openrouter';
+            const model = settings.model || null;
+            const apiKey = settings.api_keys?.[provider] || '';
 
             const diagramCode = (this.app && this.app.lastPlantumlCode) ? this.app.lastPlantumlCode : '';
+            console.log('[AssistantPanel] diagram_code context:', diagramCode ? diagramCode.substring(0, 200) + '...' : '(empty)');
 
             // Вызвать API
-            const model = settings?.model || null;
             console.log('[AssistantPanel] Sending request', {
                 chatId,
                 provider,
@@ -128,7 +130,8 @@ class AssistantPanel {
             const response = await this.apiClient.sendMessage(chatId, content, mode, {
                 provider: provider,
                 model: model,
-                diagram_code: diagramCode
+                diagram_code: diagramCode,
+                api_key: apiKey
             });
 
             const serverChatId = response.headers.get('X-Chat-ID');

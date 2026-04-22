@@ -11,6 +11,7 @@ ChatMode = Literal["assistant", "analyst"]
 class ChatConsultRequest(BaseModel):
     provider: SupportedProvider
     model: Optional[str] = None
+    api_key: str = Field(..., description="API key for the selected provider")
     message: str = Field(..., min_length=1, max_length=2000)
     mode: ChatMode = Field(
         default="assistant",
