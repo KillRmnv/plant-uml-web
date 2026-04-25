@@ -9,7 +9,11 @@
     "build:backend": ".venv/bin/pip install -r requirements.txt",
     "build:backend-win": ".venv\\Scripts\\pip install -r requirements.txt",
     "install:all-linux": "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && npm install && cd external/sc-web && npm install && npm run build",
-    "install:all-win": "python3 -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt && npm install && cd external\\sc-web && npm install && npm run build"
+    "install:all-win": "python3 -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt && npm install && cd external\\sc-web && npm install && npm run build",
+    "test": ".venv/bin/pytest tests",
+    "test:unit": ".venv/bin/pytest tests/unit",
+    "test:cov": ".venv/bin/pytest tests --cov=src/backend --cov-report=term-missing --cov-report=html",
+    "test:js": "cd tests_js && npm install && npm test"
   },
   "dependencies": {
     "d3": "^7.0.0",
