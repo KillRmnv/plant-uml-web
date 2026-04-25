@@ -104,6 +104,10 @@ async def app_page():
     with open(os.path.join(settings.frontend_path, "app.html"), "r") as f:
         return f.read()
 
+@app.get("/health")
+async def health_check():
+    """Health check"""
+    return {"status": "ok", "backend": "fastapi"}
 
 # ─────────────────────────────────────────────
 # Static files
@@ -118,10 +122,7 @@ app.mount("/", StaticFiles(directory=settings.frontend_path), name="frontend")
 logger.info(f"Mounted frontend: {settings.frontend_path}")
 
 
-@app.get("/health")
-async def health_check():
-    """Health check"""
-    return {"status": "ok", "backend": "fastapi"}
+
 
 
 if __name__ == "__main__":
