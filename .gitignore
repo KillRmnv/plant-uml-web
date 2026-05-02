@@ -40,3 +40,13 @@ QWEN.md
 external/
 secret.txt
 *.env
+
+# pytest / coverage
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# vitest
+tests_js/node_modules/
+tests_js/coverage/
