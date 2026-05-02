@@ -201,8 +201,14 @@ class ChatWindow {
     }
 
 formatContent(text) {
-        const escaped = this.escapeHtml(text);
-        return escaped.replace(/\n/g, '<br>');
+        if (typeof marked !== 'undefined') {
+            const html = marked.parse(text);
+            if (typeof DOMPurify !== 'undefined') {
+                return DOMPurify.sanitize(html);
+            }
+            return html;
+        }
+        return this.escapeHtml(text).replace(/\n/g, '<br>');
     }
 
     updateLastAssistantMessage(content) {

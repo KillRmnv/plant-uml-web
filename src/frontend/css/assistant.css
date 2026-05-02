@@ -253,8 +253,91 @@
 .message-content p,
 .message-content .message-text {
     margin: 0 0 8px 0;
-    white-space: pre-wrap;
     word-break: break-word;
+}
+
+/* Markdown Styles */
+.message-content pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 12px 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.message-content code {
+    background: rgba(0, 0, 0, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.message-content pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.message-content blockquote {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: var(--text-secondary);
+}
+
+.message-content table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    width: 100%;
+    font-size: 12px;
+}
+
+.message-content th,
+.message-content td {
+    border: 1px solid var(--border-color);
+    padding: 6px 10px;
+    text-align: left;
+}
+
+.message-content th {
+    background: var(--background-color);
+    font-weight: 600;
+}
+
+.message-content ul,
+.message-content ol {
+    padding-left: 20px;
+    margin: 8px 0;
+}
+
+.message-content li {
+    margin: 4px 0;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4 {
+    margin: 12px 0 8px 0;
+    font-weight: 600;
+}
+
+.message-content h1 { font-size: 1.4em; }
+.message-content h2 { font-size: 1.2em; }
+.message-content h3 { font-size: 1.1em; }
+
+.message-content a {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.message-content img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 8px 0;
 }
 
 .message-content p:last-child,
