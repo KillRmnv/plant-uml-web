@@ -167,6 +167,28 @@ class ChatWindow {
         `;
         
         this.messagesContainer.appendChild(message);
+
+        // Render LaTeX with KaTeX
+        console.log('[KaTeX] renderMathInElement available:', typeof renderMathInElement);
+        if (typeof renderMathInElement !== 'undefined') {
+            try {
+                const contentEl = message.querySelector('.message-text');
+                console.log('[KaTeX] Rendering on element:', contentEl?.innerHTML?.substring(0, 100));
+                renderMathInElement(contentEl, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError: false
+                });
+                console.log('[KaTeX] Render complete');
+            } catch (e) {
+                console.error('[KaTeX] Render error in addMessage:', e);
+            }
+        } else {
+            console.warn('[KaTeX] renderMathInElement not available');
+        }
+
         this.scrollToBottom();
     }
 
@@ -202,9 +224,30 @@ class ChatWindow {
 
 formatContent(text) {
         if (typeof marked !== 'undefined') {
-            const html = marked.parse(text);
+            // Pre-render LaTeX expressions with KaTeX
+            let processed = text;
+            if (window.katex) {
+                try {
+                    // Replace display math $$...$$ first
+                    processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, latex) => {
+                        console.log('[KaTeX] Display math:', latex.substring(0, 50));
+                        return window.katex.renderToString(latex, { displayMode: true, throwOnError: false });
+                    });
+                    // Replace inline math $...$ (but not $$)
+                    processed = processed.replace(/\$([^\$]+?)\$/g, (match, latex) => {
+                        console.log('[KaTeX] Inline math:', latex.substring(0, 50));
+                        return window.katex.renderToString(latex, { displayMode: false, throwOnError: false });
+                    });
+                } catch (e) {
+                    console.error('[KaTeX] Pre-render error:', e);
+                }
+            } else {
+                console.warn('[KaTeX] window.katex not available');
+            }
+            
+            let html = marked.parse(processed);
             if (typeof DOMPurify !== 'undefined') {
-                return DOMPurify.sanitize(html);
+                html = DOMPurify.sanitize(html);
             }
             return html;
         }
@@ -218,6 +261,21 @@ formatContent(text) {
             const contentEl = lastMessage.querySelector('.message-text');
             if (contentEl) {
                 contentEl.innerHTML = this.formatContent(content);
+
+                // Render LaTeX with KaTeX
+                if (typeof renderMathInElement !== 'undefined') {
+                    try {
+                        renderMathInElement(contentEl, {
+                            delimiters: [
+                                {left: '$$', right: '$$', display: true},
+                                {left: '$', right: '$', display: false}
+                            ],
+                            throwOnError: false
+                        });
+                    } catch (e) {
+                        console.error('[KaTeX] Render error in updateLastAssistantMessage:', e);
+                    }
+                }
             }
         } else {
             this.addMessage('assistant', content);

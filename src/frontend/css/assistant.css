@@ -340,6 +340,20 @@
     margin: 8px 0;
 }
 
+/* KaTeX Styles */
+.message-content .katex {
+    font-size: 1.1em;
+}
+
+.message-content .katex-display {
+    margin: 12px 0;
+    text-align: center;
+}
+
+.message-content .katex-display > .katex {
+    display: inline-block;
+}
+
 .message-content p:last-child,
 .message-content .message-text:last-child {
     margin-bottom: 0;
