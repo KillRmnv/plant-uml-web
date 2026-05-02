@@ -12,7 +12,6 @@ from sc_client.client import generate_elements_by_scs
 router = APIRouter(tags=["diagram"])
 logger = logging.getLogger(__name__)
 executor = AgentChainExecutor()
-#TODO: add new endpoint responsible for generating diagram from scs and before that loading it into memmory
 @router.post("/generate-from-inputs", response_model=schemas.DiagramGenerateResponse)
 async def generate_diagram_from_inputs_route(
     request: schemas.DiagramFromInputsRequest,
